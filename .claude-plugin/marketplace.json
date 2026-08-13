@@ -1,0 +1,14 @@
+{
+  "name": "texting-betty",
+  "description": "Texting Betty tools for Follow Up Boss.",
+  "owner": {
+    "name": "Texting Betty"
+  },
+  "plugins": [
+    {
+      "name": "tb-fub-toolkit",
+      "source": "./",
+      "description": "Follow Up Boss reporting and outbound SMS skills for Texting Betty."
+    }
+  ]
+}

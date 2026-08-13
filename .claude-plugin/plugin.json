@@ -1,0 +1,25 @@
+{
+  "name": "tb-fub-toolkit",
+  "displayName": "Texting Betty / FUB Toolkit",
+  "version": "2.2.0",
+  "description": "Follow Up Boss reporting and outbound SMS skills for Texting Betty. AI-generated output can be wrong -- verify before acting on it. Configure one value: your Follow Up Boss API key.",
+  "author": {
+    "name": "Juan"
+  },
+  "license": "MIT",
+  "keywords": ["followupboss", "fub", "texting-betty", "sms", "crm"],
+  "userConfig": {
+    "risk_acknowledged": {
+      "type": "boolean",
+      "title": "I understand the risks of using AI with my CRM",
+      "description": "This tool is driven by AI, and AI gets things wrong. It can misread your data, miscount, misclassify a reply, or state something confidently that is not true. It acts on your live Follow Up Boss account and can send real text messages to real people -- messages that cannot be unsent, and that carry TCPA and Do-Not-Call obligations that remain entirely yours. Treat everything it reports as a draft to verify, not as fact. Check any list before you act on it, and confirm every recipient before a send. You are responsible for what gets sent from your account. Tick this box only if you accept that.",
+      "required": true
+    },
+    "fub_api_key": {
+      "type": "string",
+      "title": "FUB API key",
+      "description": "Your Follow Up Boss API key. Find it in FUB under Admin > API. This is the only credential needed: the account, subdomain, and Texting Betty routing are all derived from it. Note: stored in this app's local settings in plain text, not masked, and visible in the model's context while a skill runs -- treat a session transcript the way you would treat the key itself.",
+      "required": true
+    }
+  }
+}

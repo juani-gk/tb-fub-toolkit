@@ -1,0 +1,11 @@
+# Credenciales — nunca deben entrar al repo
+.env
+.env.*
+*.credentials.json
+
+# Resultados de corridas (pueden contener datos de contactos reales)
+fub_results.json
+*_results.json
+
+# macOS
+.DS_Store
