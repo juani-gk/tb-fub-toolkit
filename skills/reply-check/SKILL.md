@@ -9,25 +9,54 @@ description: "Pull and analyze Texting Betty campaign replies from FUB, classify
 
 **Two configured values: `${user_config.risk_acknowledged}` and `${user_config.fub_api_key}`.**
 
-**Check the acknowledgement first.** `${user_config.risk_acknowledged}` must be
-`true`. If it is `false`, empty, or still a literal `${user_config.…}`, stop —
-do not read, do not send, do not "just check one thing". Tell the user:
+### Which environment are you in?
 
-> Before I touch your Follow Up Boss account, you need to tick the
-> acknowledgement in the plugin settings. It explains what can go wrong when an
-> AI works against a live CRM, and it takes ten seconds to read.
+`${user_config.…}` placeholders are filled in automatically **only in Claude
+Code**. The desktop and web apps have no plugin configuration panel, so there
+the placeholders stay literal and must be replaced by hand.
 
-This gate exists because the rest of this skill acts on a real business's data
-and can send real messages. Never work around it, and never treat a verbal
-"yes, go ahead" in chat as a substitute for the setting.
+Tell the two cases apart by what you can see:
 
+| What you observe | Where you are | What to do |
+|---|---|---|
+| Values are real | Configured already | Continue |
+| Values read literally as `${user_config.…}` **and** you have a `/plugin` command | Claude Code, unconfigured | Ask the user to run `/plugin configure tb-fub-toolkit` |
+| Values read literally **and** there is no `/plugin` command | Desktop or web app | Fill them in directly — see below |
 
-If it still reads literally as `${user_config.fub_api_key}` or is blank, the
-plugin is NOT configured. Stop and tell the user:
+### Filling them in on desktop or web
 
-> This plugin isn't configured yet. Open **Customize → Plugins →
-> tb-fub-toolkit** and paste your Follow Up Boss API key.
-> (In Claude Code: `/plugin configure tb-fub-toolkit`.)
+There is nothing to configure in the UI, so the values go into this skill file.
+Do this only when the user asks for something that needs them — never
+preemptively.
+
+**First, the acknowledgement.** Show the user this, in full, and wait for an
+explicit yes:
+
+> This tool is driven by AI, and AI gets things wrong. It can misread your
+> data, miscount, or state something confidently that is not true. It acts on
+> your live Follow Up Boss account and can send real text messages that cannot
+> be unsent, carrying TCPA and Do-Not-Call obligations that remain entirely
+> yours. Treat what it reports as a draft to verify, not as fact.
+>
+> Do you understand and accept that?
+
+A vague "sure" is not a yes. If they do not clearly accept, stop.
+
+**Then the key.** Ask for their Follow Up Boss API key (Admin → API in FUB),
+and edit **this file**, replacing every occurrence of
+`${user_config.fub_api_key}` with the literal key and
+`${user_config.risk_acknowledged}` with `true`. Change nothing else — not the
+logic, not the warnings, not the proxy URL.
+
+Say plainly what this means before doing it:
+
+- The key will sit **in plain text inside the plugin's files**.
+- It **does not survive a plugin update** — the files are replaced and it has
+  to be entered again.
+- On the web app the files reset between sessions, so it is per-session there.
+
+In Claude Code, never do this. Use `/plugin configure`, which stores the value
+properly instead of writing it into a file.
 
 Never invent a credential, and never send a request containing a literal
 `${user_config.…}` string. A **401/403 means stop, not retry.**
