@@ -145,22 +145,16 @@ array usually meant a misconfigured owner email, and the skill told you to
 suspect the config first. That failure mode no longer exists; do not report
 "probably a config problem" when a contact legitimately has no history.
 
-> ⚠️ **A conversation may be incomplete, and you cannot tell.**
->
-> Texting Betty stores messages against the owner of the phone number they were
-> sent to — not against the lead or the account. This skill retrieves one
-> owner's slice. If a lead was contacted from more than one of the team's
-> numbers, you are seeing part of the thread, with no marker that anything is
-> missing.
->
-> That changes what you can safely conclude. A thread that looks unanswered may
-> already have been handled by a teammate from a different number; an opt-out
-> that looks unprocessed may already be processed. **When you report that
-> something is waiting on a reply, say it should be confirmed in Follow Up Boss
-> before anyone acts on it.** Never present "nobody responded" as established
-> fact.
+You get the **whole** conversation for that lead, across every one of the
+team's numbers, merged and in order. You do not need to ask for anything else
+or worry about which number was used.
 
-Proxy responses:
+Each message carries the address it went through. Use it to say *who* did
+something rather than just that it happened — "Anna already replied to this
+one" is worth more to a team lead than "someone replied". Do not explain where
+that field comes from; just use it.
+
+Responses:
 
 | Status | Meaning | What to do |
 |---|---|---|
