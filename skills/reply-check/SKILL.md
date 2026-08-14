@@ -1,6 +1,6 @@
 ---
 name: "reply-check"
-description: "Pull and analyze Texting Betty campaign replies from FUB, classify them (opt-outs, declines, warm leads, booking threads), and surface action items. Finds the target segment by discovering smart lists by name, or by Texting Betty tag when the account has no replied list. Use whenever the user says \"analyze today's responses\", \"check the replies\", \"who replied today\", \"pull the replied list\", \"check a smart list\", or wants a reply summary."
+description: "Pull and analyze Texting Betty campaign replies from FUB, classify them (opt-outs, declines, warm leads, booking threads), and surface action items. Finds the leads by filtering Follow Up Boss on recent Texting Betty activity over whatever time window the user asked for, falling back to smart lists or tags. Use whenever the user says \"analyze today's responses\", \"check the replies\", \"who replied today\", \"pull the replied list\", \"check a smart list\", or wants a reply summary."
 ---
 
 # Reply Check
@@ -179,54 +179,111 @@ it is partial, and tell the user roughly when they can run the rest. If you are
 close to the cap before starting a large sweep, sample instead of fetching
 everything — a 300-contact sample answers the same question as 900.
 
-The `X-RateLimit-Remaining` header comes back on every response. Read it and
-slow down as it drops rather than discovering the wall at zero.
+### Budget: read it, never assume it
+
+Every response carries the numbers. **Never hardcode a limit in this skill —
+the server owns it and it changes without this file changing.**
+
+| Header | Meaning |
+|---|---|
+| `X-RateLimit-Limit` | The ceiling for this account |
+| `X-RateLimit-Remaining` | What is left |
+| `X-RateLimit-Cost` | What **one contact** spends on this account |
+
+**`Remaining` is not a count of contacts.** The budget is measured in upstream
+work, and one contact can cost more than one unit. To know how many contacts
+you can still do:
+
+```
+contacts_left = Remaining // Cost
+```
+
+Read this after the first fetch, before committing to a large sweep. If
+`contacts_left` is smaller than the segment, say so up front and analyse a
+sample rather than running until you hit the wall mid-way — a truncated sweep
+gives a skewed picture, and the user finds out after waiting.
+
+Slow down as `Remaining` drops instead of discovering the ceiling at zero.
 
 ---
 
 ## Workflow
 
-### 1. Find the target segment
+### 1. Find the leads to analyse
 
-**Never hardcode a smart list ID.** IDs are per-account, and a number that
-works in one tenant silently selects a different list — or a nonexistent
-one — in another. There are two paths; try them in order.
+**Path A — filter on Texting Betty activity. Do this first.**
 
-**Path A — by smart list (preferred when one exists):**
+```
+POST /people/filter?idsOnly=true
+```
+```json
+{"conditions":[[{"fld":"lastReceivedInboxAppMessage","opr":"was less than","num":"2","unit":"days","val":[]}]]}
+```
+
+This asks the question directly — *who received a Texting Betty message in the
+last N days* — instead of hoping the account happens to have a list or tag that
+approximates it. It works on any account, needs nothing set up in advance, and
+`lastReceivedInboxAppMessage` targets inbox-app messages specifically, which is
+what Texting Betty sends.
+
+Two things to get right:
+
+- **`conditions` is an array of arrays.** The nesting is required; a flat array
+  is rejected.
+- **`num` comes from what the user asked for.** "Today" is `1`, "the last
+  couple of days" is `2`, "this week" is `7`. Say which window you used when
+  you report, so they can correct you if they meant something else.
+
+**Always send `idsOnly=true`, on whichever path you take.** The analysis needs
+an ID and nothing else — the conversation comes from the proxy, not from the
+person record. Pulling full objects for hundreds of leads spends response time,
+rate-limit budget and context window on data you discard immediately.
+
+If you later need a name or phone for the report, fetch those few contacts
+individually. One call per lead you actually mention beats hundreds you don't.
+
+**Path B — by smart list (fallback).**
 
 ```python
 lists = {l["name"].lower(): l["id"] for l in get("/smartLists?limit=100")["smartlists"]}
 list_id = next((i for n, i in lists.items() if "replied" in n), None)
 ```
 
-If a list matches, pull its contacts:
+If one matches: `GET /people?limit=100&offset=0&smartListId=<discovered id>&idsOnly=true`
 
-```
-GET /people?limit=100&offset=0&smartListId=<discovered id>&idsOnly=true
-```
+**Never hardcode a smart list ID.** IDs are per-account: a number that works in
+one tenant silently selects a different list — or a nonexistent one — in
+another.
 
-**Path B — by Texting Betty tag (when no list matches):**
+**Path C — by Texting Betty tag (fallback).**
 
-Many accounts have **no "replied" list at all** — the TB-touched segment is
-identified by tag instead. This is common, not an edge case. Check tags
-before reporting that there is nothing to analyze:
+Many accounts have no "replied" list at all; the TB-touched segment is
+identified by tag instead.
 
 ```python
 tags = [t for t in get("/tags?limit=2000")["tags"] if "texting" in t["name"].lower()]
 ```
 
-TB tags encode conversation state — engagement and unsubscribe are the
-usual ones, and their `peopleCount` tells you the segment size before you
-fetch anything. Pull contacts with `GET /people?tags=<tag name>&idsOnly=true`.
+Their `peopleCount` tells you the segment size before you fetch anything. Pull
+with `GET /people?tags=<tag name>&idsOnly=true`.
 
-Note what each path measures: a *replied* list is everyone who answered,
-while an *unsubscribe* tag is only the opt-out subset. If you analyze a tag
-segment, say so in the report — the opt-out rate from an opt-out tag is
-100% by construction and means nothing.
+### Which path measures what
 
-**If neither path finds anything**, stop and show the user the smart lists
-and TB-related tags that do exist, and ask which segment to analyze. Do not
-invent an ID and do not silently analyze the wrong population.
+These are not interchangeable, and saying which one you used matters:
+
+| Path | Population |
+|---|---|
+| A — filter | Everyone who **received** a TB message in the window |
+| B — replied list | Everyone who **answered**, per that account's own definition |
+| C — unsubscribe tag | **Only opt-outs** |
+
+Path C especially: the opt-out rate from an opt-out tag is 100% by
+construction and means nothing. If you fall back to it, say so in the report
+rather than presenting the number as a campaign metric.
+
+**If no path finds anything**, stop and show the user what smart lists and
+TB-related tags do exist, and ask which segment to analyse. Do not invent an ID
+and do not silently analyse the wrong population.
 
 Important quirk: with `idsOnly=true` FUB returns ALL matching IDs in one response as `{"ids": [...]}` and ignores pagination. Do not loop offsets (you will duplicate the full set each page).
 

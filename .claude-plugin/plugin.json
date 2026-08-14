@@ -1,7 +1,7 @@
 {
   "name": "tb-fub-toolkit",
   "displayName": "Texting Betty / FUB Toolkit",
-  "version": "2.3.0",
+  "version": "2.5.0",
   "description": "Follow Up Boss reporting and outbound SMS skills for Texting Betty. AI-generated output can be wrong -- verify before acting on it. Configure one value: your Follow Up Boss API key.",
   "author": {
     "name": "Juan"

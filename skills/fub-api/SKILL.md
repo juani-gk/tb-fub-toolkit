@@ -640,6 +640,51 @@ GET /timelineCounts/{personId}
 
 ---
 
+## Filtering People
+
+```
+POST /people/filter?idsOnly=true
+```
+```json
+{"conditions":[[{"fld":"lastReceivedInboxAppMessage","opr":"was less than","num":"2","unit":"days","val":[]}]]}
+```
+
+Answers a question directly instead of relying on a smart list existing that
+happens to encode it. **Prefer this over discovering a list by name** when you
+know the condition you actually want.
+
+`conditions` is an **array of arrays** — the nesting is required.
+
+Useful fields, same vocabulary as smart list conditions (see below):
+
+| `fld` | Meaning |
+|---|---|
+| `lastReceivedInboxAppMessage` | Last inbound Texting Betty message |
+| `lastCommunication` | Any channel |
+| `inboxAppMessagesReceived` | Count of inbound TB messages |
+| `tags` | Tag membership |
+| `stage` | Stage |
+
+Pair `fld` with an `opr` such as `was less than` / `was more than` plus `num`
+and `unit`, or `is equal to` / `include any of` plus `val`.
+
+**Send `idsOnly=true` by default.** Omit it only when you have already decided
+which fields you need and why.
+
+The reasoning is not cosmetic. A filter over a few hundred leads returns a few
+hundred full person objects — every custom field, every phone, every timestamp —
+and in this toolkit the very next step usually only needs the ID to fetch a
+conversation. That payload costs response time, rate-limit budget, and context
+window, for data that is discarded a line later.
+
+If you find you need a field after all, fetch that one contact with
+`GET /people/{id}`. One extra call beats hundreds of unused objects.
+
+The pagination quirk applies here too: all IDs come back in one response and
+offsets are ignored.
+
+---
+
 ## Smart Lists
 
 ### List All Smart Lists
@@ -1137,7 +1182,17 @@ list_id = next((i for n, i in lists.items() if "replied" in n), None)
 if list_id is None:
     raise SystemExit(f"No matching list. Available: {sorted(lists)}")
 
-# 3. Page through it
+# 3. IDs only — the default. No pagination loop needed: idsOnly returns
+#    every match in one response.
+ids = get(f"/people?smartListId={list_id}&idsOnly=true")["ids"]
+print(f"{len(ids)} contacts")
+```
+
+**Only page through full objects when you actually need fields.** Reach for
+this when you need names, phones or stages for the leads you will report on —
+not as the default way to enumerate a segment:
+
+```python
 all_people = []
 offset, limit = 0, 100
 while True:
@@ -1149,6 +1204,9 @@ while True:
     time.sleep(0.3)
 print(f"Fetched {len(all_people)} contacts")
 ```
+
+`fields=allFields` is about *how* to ask when you do want fields — a hand-picked
+list often 400s. It is not a reason to fetch fields you do not need.
 
 ### Batch Activity Fetch (Rate-Limited, Resumable)
 
