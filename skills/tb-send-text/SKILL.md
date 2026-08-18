@@ -200,13 +200,14 @@ real text — against a contact in a **different tenant**. Verify first.
 
 ## Verifying the send
 
-- FUB API key auth CANNOT read `/timeline`, `/inbox/*`, or `/people/{id}/inboxAppConversationsForReply` — they return 403. This toolkit is API-key only and holds no session cookie, so those endpoints are out of scope. **Do not ask the user for a browser cookie to work around it.**
+- This toolkit can't read the conversation back through FUB directly — those internal endpoints are out of scope. **Do not ask the user for a browser cookie to work around it.**
 - Instead use the conversation proxy:
   - `POST https://tb-proxy.vercel.app/api/conversation`
   - Header `Authorization: Bearer ${user_config.fub_api_key}` (Bearer here, Basic for FUB — same key, different scheme)
   - Body `{"personid": "<id>"}`
   - There is no owner email to pass; the proxy derives the routing key from your API key.
 - The DB syncs after TB actually sends, so allow a minute or two before checking. An immediate empty result does not mean failure.
+- This is the same lookup the `reply-check` skill does, kept inline here because a send-confirmation check is small. If the task grows into actually analyzing the conversation (classifying replies, opt-outs, sentiment) rather than just confirming delivery, invoke `reply-check` instead of extending this into a parser.
 
 ## Quirks learned the hard way
 

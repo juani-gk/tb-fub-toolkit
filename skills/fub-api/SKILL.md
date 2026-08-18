@@ -224,38 +224,29 @@ headers = {
 }
 ```
 
-### Session cookie auth — REMOVED, do not reintroduce
+**This toolkit is API-key only. Never ask the user for a session cookie, or
+suggest copying one from DevTools, as a workaround for a 403.** If an
+endpoint is not reachable with the API key, treat it as unavailable and use
+one of the alternatives below — or tell the user plainly that this toolkit
+cannot do it.
 
-This toolkit is **API-key only**. Session-cookie auth was deliberately
-removed: it replays a real browser session against endpoints FUB does not
-expose publicly, the cookie expires constantly (it was the top source of
-mystery 401s), and it lives in the same "acting like FUB's own client"
-category as `X-System: fub-spa`.
+**How this toolkit covers activity, sending, and reading conversations:**
 
-**Do not ask the user for a session cookie, and do not suggest copying one
-from DevTools as a workaround for a 403.** If an endpoint is not reachable
-with the API key, treat it as unavailable and use one of the alternatives
-below — or tell the user plainly that this toolkit cannot do it.
-
-**Not reachable with an API key:**
-
-| Endpoint | Use instead |
-|---|---|
-| `/timeline`, `/timelineCounts` | Per-collection endpoints (see below), or the person object's `last*` fields |
-| `/inbox/*` (conversations, reply, counts) | Send via `POST /notes` with a TB tag (`tb-send-text` skill) |
-| `/people/{id}/inboxAppConversationsForReply` | The Texting Betty cloud function (`reply-check` skill) |
-
-**Reconstructing activity without `/timeline`:** the merged feed is
-unavailable, but its contents are reachable as separate API-key
-collections — `/events`, `/tasks`, `/notes`, `/calls`, `/textMessages`,
-`/emails`, all accepting `?personId={id}`. Pull them in one `POST /batch`
-and merge client-side by date. Note that **Texting Betty SMS will not
-appear** in any of them; TB messages come from the cloud function.
-
-For a quick view without any of that, `GET /people/{id}` already carries
-`lastCommunication`, `textsSent`/`textsReceived`, and
-`lastSentInboxAppMessageBody` / `lastReceivedInboxAppMessageBody` — the
-most recent message each way, though not the history.
+- **A contact's activity:** pull `/events`, `/tasks`, `/notes`, `/calls`,
+  `/textMessages`, `/emails` — all accepting `?personId={id}` — in one
+  `POST /batch` and merge client-side by date. **Texting Betty SMS will not
+  appear** in any of them; TB messages come from the cloud function. For a
+  quick view instead of full history, `GET /people/{id}` already carries
+  `lastCommunication`, `textsSent`/`textsReceived`, and
+  `lastSentInboxAppMessageBody` / `lastReceivedInboxAppMessageBody` — the
+  most recent message each way.
+- **Sending a text:** invoke the `tb-send-text` skill. It creates the
+  tagged note with the mechanics this reference doesn't cover (tag
+  placement, timing tags, the opt-out check) — don't hand-roll a
+  `POST /notes` call here.
+- **Reading a conversation:** invoke the `reply-check` skill. It calls the
+  Texting Betty cloud function and classifies the result — this toolkit's
+  own endpoints can't reach conversation history at all.
 
 ---
 
@@ -290,7 +281,7 @@ What to take from it:
 
 | Need | Field |
 |---|---|
-| Account ID (Typesense collections, sanity checks) | `account.id` |
+| Account ID (sanity checks) | `account.id` |
 | Subdomain, for **human-facing links only** | `account.domain` |
 | Who this key belongs to | `user.email`, `user.role` |
 
@@ -305,17 +296,6 @@ one from the other.
 
 **On 401/403 → stop, do not retry.** The key is invalid or revoked. There is
 nothing else to try and no fallback credential.
-
-### Why this is derived rather than configured
-
-Earlier versions asked the user to type the account ID and subdomain, then
-compared them against `/identity`. That comparison existed to catch a real
-failure — a key from a *different* FUB account authenticates perfectly and
-then returns someone else's data, with every call still returning `200`.
-
-Deriving removes the failure instead of detecting it: if the account always
-comes from the key, the two can never disagree. Same reason the Texting
-Betty routing key is resolved server-side rather than configured.
 
 ---
 
@@ -458,6 +438,7 @@ GET /people
 | `smartListId` | `130` | Filter by smart list |
 | `idsOnly` | `true` | Return only IDs (fast for counting) |
 | `includePonds` | `true` | Include pond assignments |
+| `q` | `jane doe` | Full-text search by name/email/phone |
 
 **Key person fields:**
 ```json
@@ -525,26 +506,6 @@ Returns: name, stage, phones, emails, assigned agent, embedded apps list. Use wh
 
 ---
 
-### Get Inbox App Conversations (for Reply) — ⛔ 403 with API-key auth
-
-> Not available to this toolkit. Use the TB cloud function to read
-> conversation state (`reply-check` skill).
-
-```
-GET /people/{id}/inboxAppConversationsForReply
-```
-
-Returns active Texting Betty conversation state — needed before sending a reply via the inbox.
-
-```json
-{
-  "publishedInboxAppsForContact": [],
-  "mostRecentMessagePublishedInboxAppId": null
-}
-```
-
----
-
 ### AI Smart Message Chips
 
 ```
@@ -563,80 +524,6 @@ Body: { "id": 12345, "name": "Jane Doe" }
 ```
 
 Marks a person as recently viewed; returns the last 10 recently viewed people.
-
----
-
-## Timeline — ⛔ NOT AVAILABLE with API-key auth
-
-> These endpoints return **403** for API-key auth, and this toolkit no
-> longer carries a session cookie. Documented for reference only —
-> **do not call them.**
->
-> Instead: pull `/events`, `/tasks`, `/notes`, `/calls`, `/textMessages`,
-> `/emails` with `?personId={id}` in one `POST /batch` and merge by date,
-> or read the `last*` fields off `GET /people/{id}`. Texting Betty SMS do
-> not appear in any of these — they come from the cloud function, see the
-> `reply-check` skill.
-
-### Get Person Timeline
-
-```
-GET /timeline?personId={id}&limit=50&offset=0
-```
-
-Returns all activity types: `Note`, `ChangeLog`, `Event`, `StarredItem`, `TextMessage`, `Call`, `Email`, `InboxAppMessage`
-
-**InboxAppMessage** (Texting Betty SMS) — the most important type for campaign analysis:
-```json
-{
-  "id": "InboxAppMessage:445231",
-  "date": "2026-06-09T14:30:00Z",
-  "type": "InboxAppMessage",
-  "personId": 12345,
-  "item": {
-    "id": 445231,
-    "message": "Hi, I'm interested in learning more",
-    "isIncoming": true,
-    "deliveryStatus": "delivered",
-    "sentAt": "2026-06-09T14:30:00Z"
-  }
-}
-```
-
-**Filter for SMS only:**
-```python
-msgs = [i for i in data["timeline"] if i["type"] == "InboxAppMessage"]
-```
-
-**Sort and extract last in/out:**
-```python
-msgs = sorted(msgs, key=lambda m: m["date"])
-inc = [m for m in msgs if m["item"].get("isIncoming")]
-out = [m for m in msgs if not m["item"].get("isIncoming")]
-last_in  = inc[-1] if inc else None
-last_out = out[-1] if out else None
-
-ib = (last_in["item"].get("message") or "").strip() if last_in else ""
-ob = (last_out["item"].get("message") or "").strip() if last_out else ""
-dl = (last_out["item"].get("deliveryStatus") or "").lower() if last_out else ""
-```
-
-**Delivery status values:** `delivered`, `failed`, `undelivered`, `error`, `sent`, `pending`
-
----
-
-### Timeline Counts
-
-```
-GET /timelineCounts/{personId}
-```
-
-```json
-{
-  "counts": { "ChangeLog": 2, "Note": 1, "Event": 0, "StarredItem": 0 },
-  "personId": 12345
-}
-```
 
 ---
 
@@ -720,8 +607,9 @@ tb = [t for t in data.get("tags", []) if "texting" in t["name"].lower()]
 
 Tags whose names encode TB state (engagement, unsubscribe) identify the
 contacts with messaging history. Filter people by tag with
-`GET /people?tags=<name>&idsOnly=true`. See the `reply-check` skill, which
-implements both paths.
+`GET /people?tags=<name>&idsOnly=true`. For a full reply-analysis task,
+invoke the `reply-check` skill instead of reimplementing this filter +
+classify workflow here — it already has both paths built.
 
 **Response shape:**
 ```json
@@ -918,80 +806,6 @@ a skill.
 
 ---
 
-## Inbox / Conversations — ⛔ NOT AVAILABLE with API-key auth
-
-> These endpoints return **403** for API-key auth. Documented for reference
-> only — **do not call them.**
->
-> To send a message, use `POST /notes` with a Texting Betty tag (the
-> `tb-send-text` skill). To read a conversation, use the TB cloud function
-> (the `reply-check` skill). Neither needs inbox access.
-
-### List Conversations
-
-```
-GET /inbox/{inboxId}/conversations?limit=25&offset=0
-```
-
-### Get Conversation Details
-
-```
-GET /inbox/{inboxId}/conversations/{conversationId}
-GET /inbox/{inboxId}/conversations/{conversationId}/details
-```
-
-### Mark Conversation as Read
-
-```
-PUT /inbox/{inboxId}/conversations/{conversationId}
-Body: { "read": true }
-Response: 204 No Content
-```
-
-### Reply in a Conversation (Send Message)
-
-```
-POST /inbox/{inboxId}/conversations/{conversationId}/reply
-Body: { "body": "Your message here", "attachments": [] }
-Response: { "success": true }
-```
-
-**Inbox ID `0`** is used for the default/main inbox.
-
-### Inbox Counts
-
-```
-GET /inboxCounts
-GET /inboxUnreadCounts/unread
-```
-
-### Installed Inbox Apps
-
-```
-GET /inboxApps/installedApps
-```
-
----
-
-## Text Messages
-
-### Check If Can Schedule
-
-```
-POST /textMessages/canSchedule
-Body: { "personId": 12345, "recipients": [] }
-Response: 204 No Content (success = scheduling allowed)
-```
-
-### Send Flow via Texting Betty (Embedded App)
-
-Full send flow:
-1. `POST /textMessages/canSchedule` — confirm scheduling is allowed
-2. `GET /people/{id}/inboxAppConversationsForReply` — get active conversation state
-3. `POST /inbox/{inboxId}/conversations/{conversationId}/reply` — send the message
-
----
-
 ## Text Message Templates
 
 ### List Templates
@@ -1131,28 +945,6 @@ POST /batch
 
 ---
 
-## Typesense Full-Text Search — ⛔ no supported auth
-
-> This is FUB's internal search infrastructure. It has **no API-key auth
-> path** — the SPA reaches it with a session-scoped credential this toolkit
-> no longer holds. Documented for reference only; **do not call it.**
->
-> For search, use `GET /people?q=<term>` or filter with smart lists / tags.
-
-FUB uses a self-hosted Typesense instance for instant search.
-
-**Base URL:** `https://<typesense-host>` — no longer a configured value.
-
-| Entity | Collection Path |
-|---|---|
-| Contacts | `/collections/contacts_<account.id>/documents/search` |
-| Notes | `/collections/notes_<account.id>/documents/search` |
-| Calls | `/collections/calls_<account.id>/documents/search` |
-
-The account ID (from `/identity`) is embedded in the collection name.
-
----
-
 ## Common Python Patterns
 
 ### Fetch All Contacts from a Smart List
@@ -1210,8 +1002,7 @@ list often 400s. It is not a reason to fetch fields you do not need.
 
 ### Batch Activity Fetch (Rate-Limited, Resumable)
 
-`/timeline` is not reachable with an API key. Pull the individual
-collections instead and merge them client-side.
+Pull the individual collections and merge them client-side.
 
 ```python
 import os
@@ -1256,13 +1047,13 @@ print(f"Done: {len(results)}/{len(contact_ids)}")
 |---|---|---|
 | `CERTIFICATE_VERIFY_FAILED` | Python can't find the system trust store | Pass `cafile="/etc/ssl/cert.pem"` — never disable verification |
 | `curl: command not found` / blocked | `curl` is unavailable in this environment | Use Python `urllib` with the canonical `http()` helper |
-| Data looks wrong but every call returns 200 | API key belongs to a **different FUB account** | Call `/identity` first and compare against the configured account |
+| Data looks wrong but every call returns 200 | API key belongs to a **different FUB account** | Call `/identity` and confirm `account.name`/`account.domain` are the account you expect |
 | HTTP 400 on `/people` | `fields=id,name,...` list too long | Use `fields=allFields` |
 | HTTP 401 | API key invalid or revoked | Stop — do not retry. Ask the user to check the key |
-| HTTP 403 | Endpoint needs session auth (`/timeline`, `/inbox/*`) | Out of scope. Use the documented alternative; never ask for a cookie |
+| HTTP 403 | Endpoint not available to this integration | Out of scope. Use the documented alternative; never ask for a cookie |
 | HTTP 429 | Rate limit hit | Sleep 4s, exponential backoff, lower concurrency |
 | Account flagged / key revoked | Sent `X-System: fub-spa` or other first-party client headers | Never impersonate FUB's own web app; register an integration instead |
-| HTML login page instead of JSON | Called a session-only endpoint | That endpoint is out of scope — use the API-key alternative |
+| HTML login page instead of JSON | Called an endpoint this integration can't reach | That endpoint is out of scope — use the API-key alternative |
 | HTTP 404 on smart list | Hardcoded an ID from another account | Discover by name via `/smartLists`; IDs are per-account |
 | No "replied" list exists | Account segments by tag, not by list | Fall back to the tag path (`/tags`, then `/people?tags=`) |
 | `Read-only file system: '/tmp/…'` | `/tmp` is not writable here | Write state to the working directory instead |

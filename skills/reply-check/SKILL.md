@@ -72,7 +72,10 @@ skill for the canonical `http()` helper.
 can get the account flagged. Send `X-System`/`X-System-Key` only if FUB
 issued you an integration identifier; otherwise send neither.
 
-This skill reads contact data only; it never sends messages.
+This skill reads contact data only; it never sends messages. If the task
+turns into actually texting someone — not just reporting on replies —
+invoke the `tb-send-text` skill for that. Don't improvise a `/notes` call
+here.
 
 ## Talking to the user
 
@@ -134,16 +137,13 @@ proxy            look that account up in the client registry
 proxy → TB       the conversation store, using the routing key on file
 ```
 
-**There is no owner email to configure, and none to pass.** Texting Betty
-partitions conversations by a routing address that is *not* the FUB account
-owner and not the key's own user — in a multi-user account only one specific
-address works. That value is resolved once at signup and stored server-side.
+**There is no owner email to configure, and none to pass — never ask the
+user for one.** Texting Betty partitions conversations by a routing address
+that is *not* the FUB account owner and not the key's own user; it's
+resolved server-side from your API key.
 
-This matters for how you read results: **an empty `texts` array now means
-what it says — that contact has no messages.** In earlier versions an empty
-array usually meant a misconfigured owner email, and the skill told you to
-suspect the config first. That failure mode no longer exists; do not report
-"probably a config problem" when a contact legitimately has no history.
+**An empty `texts` array means exactly that: this contact has no messages.**
+Do not report it as "probably a config problem."
 
 You get the **whole** conversation for that lead, across every one of the
 team's numbers, merged and in order. You do not need to ask for anything else
@@ -300,7 +300,7 @@ Response: `{"texts": [{"direction": "sent"|"received", "body": ..., "t": "<times
 
 Practical mechanics learned the hard way:
 - Use a ThreadPoolExecutor with ~10 workers; each call takes 1-2s.
-- **An empty `texts` array means that contact has no messages.** This is now a real answer, not a symptom of misconfiguration — the routing key comes from the server, so it cannot be wrong. If *every* contact in a segment comes back empty, suspect the segment (wrong list or tag), not the credentials.
+- If *every* contact in a segment comes back empty, suspect the segment (wrong list or tag), not the credentials.
 - Keep a resumable results file keyed by `personid` so reruns skip completed fetches. **Write it to the working directory — `/tmp` is not writable here.**
 - The 45-second cap is a sandbox limit, not a TB one. Where it applies, batch at most ~130 fetches per invocation; running directly on a workstation, no chunking is needed.
 - For a large segment (300+), analyze a random sample of ~300 with a fixed seed for reproducibility instead of fetching everything.
