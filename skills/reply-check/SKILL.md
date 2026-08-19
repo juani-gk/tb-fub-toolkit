@@ -98,6 +98,7 @@ When something fails, say what it means for them and what they can do about it:
 | 403, account not registered | "This Follow Up Boss account isn't set up for Texting Betty yet. Support can enable it." |
 | 502 / timeout | "Texting Betty isn't responding right now — worth trying again in a few minutes." |
 | 429 rate limited | "I've pulled as many conversations as I can this hour. Here's what I found so far — I can finish the rest in about N minutes." |
+| Every request fails with no response at all, not a FUB error | "I can't reach Follow Up Boss at all right now — this looks like a network permission issue on this Claude account, not something wrong with your FUB account. If you're on a team plan, your workspace admin needs to allow access; otherwise it's in your own Claude network settings." |
 | Empty conversation | "No text history with this contact yet." |
 | Nothing configured | "I need your Follow Up Boss API key first — you can paste it in the plugin settings." |
 
@@ -252,14 +253,10 @@ another.
 **Path C — by Texting Betty tag (fallback).**
 
 Many accounts have no "replied" list at all; the TB-touched segment is
-identified by tag instead.
-
-```python
-tags = [t for t in get("/tags?limit=2000")["tags"] if "texting" in t["name"].lower()]
-```
-
-Their `peopleCount` tells you the segment size before you fetch anything. Pull
-with `GET /people?tags=<tag name>&idsOnly=true`.
+identified by tag instead. Discover the tag name from the `tags` array
+embedded on person objects you already have (from Path A/B results, or a
+sample `/people` call), or ask the user for the exact tag name. Pull the
+segment with `GET /people?tags=<tag name>&idsOnly=true`.
 
 ### Which path measures what
 
