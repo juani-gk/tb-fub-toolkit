@@ -117,6 +117,7 @@ When something fails, say what it means for them and what they can do about it:
 | 401 from FUB | "I can't get into your Follow Up Boss account — the key may have been reset. You can update it in the plugin settings." |
 | 403, account not registered | "This Follow Up Boss account isn't set up for Texting Betty yet. Support can enable it." |
 | 502 / timeout | "Texting Betty isn't responding right now — worth trying again in a few minutes." |
+| Every request fails with no response at all, not a FUB error | "I can't reach Follow Up Boss at all right now — this looks like a network permission issue on this Claude account, not something wrong with your FUB account. If you're on a team plan, your workspace admin needs to allow access; otherwise it's in your own Claude network settings." |
 | Empty conversation | "No text history with this contact yet." |
 | Nothing configured | "I need your Follow Up Boss API key first — you can paste it in the plugin settings." |
 

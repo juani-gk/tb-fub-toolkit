@@ -140,6 +140,7 @@ When something fails, say what it means for them and what they can do about it:
 | 401 from FUB | "I can't get into your Follow Up Boss account — the key may have been reset. You can update it in the plugin settings." |
 | 403, account not registered | "This Follow Up Boss account isn't set up for Texting Betty yet. Support can enable it." |
 | 502 / timeout | "Texting Betty isn't responding right now — worth trying again in a few minutes." |
+| Every request fails with no response at all, not a FUB error | "I can't reach Follow Up Boss at all right now — this looks like a network permission issue on this Claude account, not something wrong with your FUB account. If you're on a team plan, your workspace admin needs to allow access; otherwise it's in your own Claude network settings." |
 | Empty conversation | "No text history with this contact yet." |
 | Nothing configured | "I need your Follow Up Boss API key first — you can paste it in the plugin settings." |
 
@@ -233,10 +234,10 @@ cannot do it.
 **How this toolkit covers activity, sending, and reading conversations:**
 
 - **A contact's activity:** pull `/events`, `/tasks`, `/notes`, `/calls`,
-  `/textMessages`, `/emails` — all accepting `?personId={id}` — in one
-  `POST /batch` and merge client-side by date. **Texting Betty SMS will not
-  appear** in any of them; TB messages come from the cloud function. For a
-  quick view instead of full history, `GET /people/{id}` already carries
+  `/textMessages`, `/emails` — all accepting `?personId={id}` — individually
+  and merge client-side by date. **Texting Betty SMS will not appear** in
+  any of them; TB messages come from the cloud function. For a quick view
+  instead of full history, `GET /people/{id}` already carries
   `lastCommunication`, `textsSent`/`textsReceived`, and
   `lastSentInboxAppMessageBody` / `lastReceivedInboxAppMessageBody` — the
   most recent message each way.
@@ -506,27 +507,6 @@ Returns: name, stage, phones, emails, assigned agent, embedded apps list. Use wh
 
 ---
 
-### AI Smart Message Chips
-
-```
-GET /people/{id}/insights/smartMessageChips
-```
-
-Returns suggested message topics (introduction, follow-up, still-buying, nurture, custom).
-
----
-
-### Log Recent View
-
-```
-POST /people/recent
-Body: { "id": 12345, "name": "Jane Doe" }
-```
-
-Marks a person as recently viewed; returns the last 10 recently viewed people.
-
----
-
 ## Filtering People
 
 ```
@@ -597,13 +577,10 @@ from another account.** Show the user the lists that do exist and ask which
 one to use.
 
 **A matching list may not exist at all.** Not every account has "replied"
-lists — segmentation is often done by *tag* instead. When list discovery
-comes up empty, check tags before concluding there is no data:
-
-```python
-status, data = http(f"{BASE}/tags?limit=2000", headers)
-tb = [t for t in data.get("tags", []) if "texting" in t["name"].lower()]
-```
+lists — segmentation is often done by *tag* instead. Discover tag names from
+the `tags` array embedded on person objects you already have (from
+`/people`, `/people/filter`, or `GET /people/{id}`), or ask the user for the
+exact tag name.
 
 Tags whose names encode TB state (engagement, unsubscribe) identify the
 contacts with messaging history. Filter people by tag with
@@ -649,41 +626,14 @@ GET /smartLists/{id}
 
 ---
 
-### Smart List Groups & Defaults
-
-```
-GET /smartListGroups
-GET /defaultSmartLists
-```
-
----
-
 ## Tags
 
-### List All Tags
-
-```
-GET /tags?limit=2000
-```
-
-```json
-{
-  "tags": [
-    {
-      "id": 9584,
-      "name": "Referral",
-      "peopleCount": 14287,
-      "trashedPeopleCount": 63
-    }
-  ]
-}
-```
-
-Tags are account-specific — pull the current list live via the endpoint
-above rather than hardcoding tag IDs or names in a skill. Common built-in
-or convention-based tags include things like `Import` (imported contact),
-an "engaged with the SMS platform" tag, and an "AI messaging disabled"
-tag, but exact names and IDs vary per account.
+Tags are account-specific. Discover them from the `tags` array embedded on
+person objects (returned by `/people`, `/people/filter`, or
+`GET /people/{id}`) rather than hardcoding IDs or names in a skill. Common
+built-in or convention-based tags include things like `Import` (imported
+contact), an "engaged with the SMS platform" tag, and an "AI messaging
+disabled" tag, but exact names and IDs vary per account.
 
 ---
 
@@ -778,34 +728,6 @@ live, not hardcoded in a skill.
 
 ---
 
-## Shared Inboxes
-
-### List Shared Inboxes
-
-```
-GET /sharedInboxes?showAllBypass=true&limit=20
-```
-
-```json
-{
-  "sharedInboxes": [
-    {
-      "id": 34,
-      "name": "Example Team",
-      "status": "Active",
-      "phones": [{ "phone": "5555550100", "canText": true }],
-      "users": [{ "id": 37, "name": "Example Team", "role": "Agent" }]
-    }
-  ]
-}
-```
-
-Shared inboxes are account-specific — always pull the current list live via
-the endpoint above rather than hardcoding names, IDs, or phone numbers in
-a skill.
-
----
-
 ## Text Message Templates
 
 ### List Templates
@@ -855,37 +777,11 @@ GET /personAttachments?personId={id}&limit=100&offset=0
 
 ---
 
-## Scheduled Emails
-
-```
-GET /scheduledEmails?personId={id}&status=10&limit=100&offset=0
-```
-
-`status=10` = pending.
-
----
-
-## Website Activity
-
-```
-GET /websiteActivity?personId={id}
-```
-
----
-
 ## Deals / Pipelines
 
 ```
 GET /pipelines
 GET /deals?personId={id}&limit=100&offset=0
-```
-
----
-
-## Saved Property Searches
-
-```
-GET /savedPropertySearches?personId={id}
 ```
 
 ---
@@ -904,43 +800,9 @@ GET /myAgentRelationships/unified?personId={id}&limit=100&offset=0
 GET /ponds
 GET /teams
 GET /groups
-GET /leadSources
 GET /categories
 GET /timeframes
 GET /callLists
-GET /blockedIdentifiers
-```
-
----
-
-## Batch API
-
-Execute multiple requests in one HTTP call — use this when loading a contact's full context.
-
-```
-POST /batch
-```
-
-```json
-{
-  "batch": [
-    { "relativeUrl": "/v1/appointments?limit=100&offset=0&personId=12345", "name": "appts", "method": "GET" },
-    { "relativeUrl": "/v1/tasks?limit=100&personId=12345&offset=0", "name": "tasks", "method": "GET" },
-    { "relativeUrl": "/v1/actionPlansPeople?personId=12345&limit=100&offset=0", "name": "plans", "method": "GET" },
-    { "relativeUrl": "/v1/personAttachments?personId=12345&limit=100&offset=0", "name": "files", "method": "GET" }
-  ]
-}
-```
-
-**Response:** Array of results per name:
-```json
-[
-  {
-    "code": 200,
-    "body": { "_metadata": { "collection": "appointments", "total": 0 }, "appointments": [] },
-    "name": "appts"
-  }
-]
 ```
 
 ---
@@ -1000,7 +862,7 @@ print(f"Fetched {len(all_people)} contacts")
 `fields=allFields` is about *how* to ask when you do want fields — a hand-picked
 list often 400s. It is not a reason to fetch fields you do not need.
 
-### Batch Activity Fetch (Rate-Limited, Resumable)
+### Activity Fetch (Rate-Limited, Resumable)
 
 Pull the individual collections and merge them client-side.
 
@@ -1012,19 +874,17 @@ results_file = "fub_results.json"
 results = json.load(open(results_file)) if os.path.exists(results_file) else {}
 
 contact_ids = [p["id"] for p in all_people]
+COLLECTIONS = ["notes", "calls", "events"]
 
 for pid in contact_ids:
     if str(pid) in results:
         continue  # already processed
+    person_data = {}
     for attempt in range(3):
         try:
-            batch = {"batch": [
-                {"relativeUrl": f"/v1/notes?personId={pid}&limit=100", "name": "notes", "method": "GET"},
-                {"relativeUrl": f"/v1/calls?personId={pid}&limit=100", "name": "calls", "method": "GET"},
-                {"relativeUrl": f"/v1/events?personId={pid}&limit=100", "name": "events", "method": "GET"},
-            ]}
-            data = post("/batch", batch)
-            results[str(pid)] = data
+            for name in COLLECTIONS:
+                person_data[name] = get(f"/{name}?personId={pid}&limit=100")
+            results[str(pid)] = person_data
             break
         except Exception as e:
             if "429" in str(e):
@@ -1045,6 +905,7 @@ print(f"Done: {len(results)}/{len(contact_ids)}")
 
 | Error | Cause | Fix |
 |---|---|---|
+| Every request fails to connect at all (no response, no error body — not `CERTIFICATE_VERIFY_FAILED`, not a JSON error from FUB) | Claude's network egress settings don't allow the domains this toolkit needs (`api.followupboss.com`, `tb-proxy.vercel.app`). This is generic to Claude, not a FUB-specific problem — it would block any domain not on the allowlist | In Claude Code (web or desktop) settings: **Capabilities → Allow network egress → domain allowlist**. If part of a team, the org owner does this at the workspace level; on an individual account, do it yourself. Either add these two domains or select **all domains** |
 | `CERTIFICATE_VERIFY_FAILED` | Python can't find the system trust store | Pass `cafile="/etc/ssl/cert.pem"` — never disable verification |
 | `curl: command not found` / blocked | `curl` is unavailable in this environment | Use Python `urllib` with the canonical `http()` helper |
 | Data looks wrong but every call returns 200 | API key belongs to a **different FUB account** | Call `/identity` and confirm `account.name`/`account.domain` are the account you expect |
@@ -1055,7 +916,7 @@ print(f"Done: {len(results)}/{len(contact_ids)}")
 | Account flagged / key revoked | Sent `X-System: fub-spa` or other first-party client headers | Never impersonate FUB's own web app; register an integration instead |
 | HTML login page instead of JSON | Called an endpoint this integration can't reach | That endpoint is out of scope — use the API-key alternative |
 | HTTP 404 on smart list | Hardcoded an ID from another account | Discover by name via `/smartLists`; IDs are per-account |
-| No "replied" list exists | Account segments by tag, not by list | Fall back to the tag path (`/tags`, then `/people?tags=`) |
+| No "replied" list exists | Account segments by tag, not by list | Discover tag names from a person object's embedded `tags` array, then filter with `/people?tags=` |
 | `Read-only file system: '/tmp/…'` | `/tmp` is not writable here | Write state to the working directory instead |
 | Bash 45s timeout | Sandbox limit, not a FUB limit | Chunk to ≤55 contacts per call — only when a timeout applies |
 
