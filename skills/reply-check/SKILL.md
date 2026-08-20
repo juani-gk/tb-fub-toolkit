@@ -150,10 +150,20 @@ You get the **whole** conversation for that lead, across every one of the
 team's numbers, merged and in order. You do not need to ask for anything else
 or worry about which number was used.
 
-Each message carries the address it went through. Use it to say *who* did
-something rather than just that it happened — "Anna already replied to this
-one" is worth more to a team lead than "someone replied". Do not explain where
-that field comes from; just use it.
+Each message also carries what sent it: `created_by` (a name — an
+automation's name, an action plan's name, or a team member's name),
+`automation_id`, and `action_plan_id`. Use this to say *what* is driving a
+reply, not just that a reply happened — "the DCM 10 Days automation" is worth
+more to a team lead than "an automation."
+
+- Both IDs null on a `sent` message → a person sent it manually. Use
+  `created_by` as their name.
+- Both IDs null on a `received` message → normal; that's just the lead's own
+  reply, nothing sent it.
+- `automation_id` set → an automation sent it. `action_plan_id` set → an
+  action plan step sent it. Treat the ID as the grouping key (names can be
+  renamed or reused later) but always **report the name**, never the raw ID —
+  the reader doesn't know or care what number a campaign is.
 
 Responses:
 
@@ -293,7 +303,7 @@ status, body = http(
 texts = (body or {}).get("texts", [])
 ```
 
-Response: `{"texts": [{"direction": "sent"|"received", "body": ..., "t": "<timestamp>", ...}]}`.
+Response: `{"texts": [{"direction": "sent"|"received", "body": ..., "t": "<timestamp>", "created_by": ..., "automation_id": ..., "action_plan_id": ..., ...}]}`.
 
 Practical mechanics learned the hard way:
 - Use a ThreadPoolExecutor with ~10 workers; each call takes 1-2s.
@@ -312,6 +322,14 @@ Sort each conversation by timestamp. Split inbound vs outbound. Classify by the 
 - **Dialogue**: 2+ inbound messages.
 - Everything else is a polite decline or noise.
 
+**Attribution — what drove this reply.** For the classified inbound message,
+take the outbound message immediately before it in the sorted conversation
+(last-touch, at the message level — you're reading individual texts, not
+building a conversation-level model). That outbound message's
+`created_by`/`automation_id`/`action_plan_id` is the source to attribute the
+reply to. If there's no prior outbound in the fetched window, there's nothing
+to attribute — say so rather than guessing.
+
 Also detect, in inbound text, compliance and quality flags: `tcpa|dnc|do not call registry|lawsuit|report|scam|spam|harass|relentless|blocking`, wrong-number claims, out-of-scope or unqualified-lead replies (list hygiene misses), and "are you a bot" detections.
 
 ### 4. Report
@@ -322,6 +340,16 @@ Structure the report exactly like this:
 2. **Needs action today**: every warm thread where the last message is inbound (the AI or a human owes a reply), any booked call needing confirmation, any AI promise that requires human follow-through (e.g. "I'll email you..." — verify something actually sends it), any scheduling mismatch (lead proposed a time, AI proposed a different one).
 3. **Watch/nurture**: promised callbacks, "check back later" agreements.
 4. **Flags**: compliance complaints (treat DNC/TCPA as urgent), bot detections, list hygiene misses.
+5. **Source breakdown** — include this when the ask is a comparison ("which
+   automation is causing opt-outs", "which action plan performs better") or
+   when opt-outs cluster heavily under one source; otherwise leave it out of
+   a plain daily check-in. Group by the source name from Attribution above
+   (automation, action plan, or person), and show opt-out share and
+   warm/booking share per source. **Say plainly that this is share of
+   repliers, not a conversion rate** — a real rate needs how many that source
+   *sent* to, which isn't in this payload. Don't imply "60% opt-out" means 6
+   of 10 people it texted opted out when it actually means 6 of 10 people who
+   *replied* did.
 
 Include FUB contact IDs so a human can jump to `https://<account.domain>.followupboss.com/2/people/view/{id}` — take `account.domain` from the `/identity` call you already made.
 
@@ -334,3 +362,8 @@ When the user asks to "check again" the same day, keep the previous ID snapshot 
 - Opt-outs among repliers of roughly 30-40% is common for cold outbound SMS campaigns; a share much higher than that usually signals a burned list or overly aggressive copy.
 - The most valuable output is the action list, not the counts. Conversion problems (unanswered warm leads, missed handoffs) lose more opportunities than copy problems.
 - Bare instant "Stop" replies clustered on day one of a wave usually mean the contacts recognize a prior campaign (burned relaunch).
+- If the same source name appears to send from what look like two different
+  automations/action plans (or the name itself seems to have changed
+  mid-window), say so rather than quietly merging or splitting the count —
+  that's a renamed or duplicated campaign, and the report should flag it
+  rather than guess which bucket is "correct."
