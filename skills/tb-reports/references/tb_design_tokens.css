@@ -76,18 +76,19 @@
 /* Reusable primitives - copy into a report's <style> block and reference
    these var() names; do not hand-roll new hex values per report. */
 
+/* `--tb-font` is declared inside `.tb-report`'s own custom-property scope
+   (above), so `font-family: var(--tb-font)` only resolves where `.tb-report`
+   itself or one of its descendants asks for it - it is NOT visible on `html`
+   or `body`, which are its ancestors. A real, observed bug: an earlier
+   version of this file (and two of the shells in assets/) applied the var()
+   on `html, body` instead, which is invalid at computed-value time outside
+   `.tb-report`'s scope and silently fell back to the browser's serif
+   default. If a page ever needs the font set outside `.tb-report`, either
+   move the variable to `:root` (visible everywhere, what
+   `optouts_vs_replies_shell.html` does) or repeat the literal font stack -
+   never reference `--tb-font` from an element `.tb-report` doesn't contain. */
 .tb-report { font-family: var(--tb-font); background: var(--tb-page-plane); color: var(--tb-text-primary); }
-
-/* Print/PDF export can silently fall back to a serif default (Times) if
-   the export pipeline applies its own print stylesheet and the page only
-   sets font-family on body, relying on inheritance - some export paths
-   don't honor that. Every shell in assets/ carries this same three-line
-   defense; keep it if you add a new shell rather than dropping it as
-   "redundant" - it isn't, until proven otherwise on the actual export
-   path in use. */
 * { font-family: inherit; }
-html, body { font-family: var(--tb-font); }
-@media print { html, body, table, th, td, * { font-family: var(--tb-font) !important; } }
 
 .tb-card {
   background: var(--tb-surface);

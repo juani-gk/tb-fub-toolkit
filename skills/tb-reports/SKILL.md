@@ -123,13 +123,23 @@ JS, and pinned-totals-row behavior worked out against real accounts.
 `<style>` + markup + `<script>`, deliberately with no `<!doctype>`,
 `<html>`, `<head>`, or `<body>` tag of their own. That's not a stray
 omission - the `Artifact` tool's own contract requires content-only,
-supplying its own `<head>`/`<body>` skeleton at publish time. A real,
-observed failure: publishing one of these shells WITH its own nested
-`<html>/<head>/<body>` wrapper produced a report that silently rendered
-in the browser's bare default serif font instead of the sans-serif stack
-in its `<style>` block - the wrapper conflicted with the platform's own
-and the styling didn't reliably apply. Fill in placeholders on the file
-exactly as it is; don't add wrapper tags before publishing.
+supplying its own `<head>`/`<body>` skeleton at publish time; publishing a
+shell WITH its own nested wrapper is a real, separately-observed failure
+mode. Fill in placeholders on the file exactly as it is; don't add
+wrapper tags before publishing.
+
+**Every shell's font must be set on `.tb-report` itself, never on `html`
+or `body`.** `--tb-font` is a custom property scoped inside `.tb-report`'s
+own declaration block (`tb_design_tokens.css`'s comment above that rule
+has the full explanation) - it is invisible to `html`/`body`, which are
+`.tb-report`'s *ancestors*, not its descendants. A real, observed bug: two
+shells referenced `var(--tb-font)` from `html, body` "for extra safety,"
+which is invalid there and silently fell back to the browser's serif
+default - a completely different failure from the wrapper-tag one above,
+and one that survived a first attempted fix because it looked like the
+same symptom. If you ever need the font set outside `.tb-report`, move
+the variable to `:root` instead (visible everywhere) rather than
+reaching for `html, body { font-family: var(--tb-font) }` again.
 
 **No em-dashes in anything written into a placeholder** - title, subtitle,
 headline sentence, footnote, KPI callout, any narrative text. Use a hyphen,
