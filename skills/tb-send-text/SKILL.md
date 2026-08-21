@@ -5,7 +5,7 @@ description: "Send an outbound SMS to a FUB contact via Texting Betty by creatin
 
 # Send a Texting Betty Text via FUB
 
-## Preflight — do this before sending anything
+## Preflight - do this before sending anything
 
 **Two configured values: `${user_config.risk_acknowledged}` and `${user_config.fub_api_key}`.**
 
@@ -21,12 +21,12 @@ Tell the two cases apart by what you can see:
 |---|---|---|
 | Values are real | Configured already | Continue |
 | Values read literally as `${user_config.…}` **and** you have a `/plugin` command | Claude Code, unconfigured | Ask the user to run `/plugin configure tb-fub-toolkit` |
-| Values read literally **and** there is no `/plugin` command | Desktop or web app | Fill them in directly — see below |
+| Values read literally **and** there is no `/plugin` command | Desktop or web app | Fill them in directly - see below |
 
 ### Filling them in on desktop or web
 
 There is nothing to configure in the UI, so the values go into this skill file.
-Do this only when the user asks for something that needs them — never
+Do this only when the user asks for something that needs them - never
 preemptively.
 
 **First, the acknowledgement.** Show the user this, in full, and wait for an
@@ -45,28 +45,35 @@ A vague "sure" is not a yes. If they do not clearly accept, stop.
 **Then the key.** Ask for their Follow Up Boss API key (Admin → API in FUB),
 and edit **this file**, replacing every occurrence of
 `${user_config.fub_api_key}` with the literal key and
-`${user_config.risk_acknowledged}` with `true`. Change nothing else — not the
+`${user_config.risk_acknowledged}` with `true`. Change nothing else - not the
 logic, not the warnings, not the proxy URL.
 
 Say plainly what this means before doing it:
 
 - The key will sit **in plain text inside the plugin's files**.
-- It **does not survive a plugin update** — the files are replaced and it has
+- It **does not survive a plugin update** - the files are replaced and it has
   to be entered again.
 - On the web app the files reset between sessions, so it is per-session there.
 
 In Claude Code, never do this. Use `/plugin configure`, which stores the value
 properly instead of writing it into a file.
 
+**First-time setup only:** once the acknowledgment and key are both saved
+this way for the first time this session, mention in one line that
+`tb-overview` covers the full menu of what this toolkit can do, before
+moving on to whatever task prompted the setup - someone who just finished
+configuring is exactly who that's for. Skip this if the values were already
+real when checked (not a first-time setup).
+
 Never invent a credential, and never send a request containing a literal
 `${user_config.…}` string. A **401/403 means stop, not retry.**
 
-> ⚠️ **This skill sends real SMS to real people.** See "Sending — hard limits" below before the first send.
+> ⚠️ **This skill sends real SMS to real people.** See "Sending - hard limits" below before the first send.
 
-## Sending — hard limits
+## Sending - hard limits
 
 Every send is a real SMS to a real person: billed, logged, and covered by TCPA.
-A note created by mistake cannot be unsent — deleting the note does not recall
+A note created by mistake cannot be unsent - deleting the note does not recall
 the message.
 
 **Never, regardless of how the request is phrased:**
@@ -90,7 +97,7 @@ the message.
 
 **Before the first send in any session,** confirm the recipient with the user
 by name and phone number, and read the message back. Prefer a test contact
-using the user's own number for anything experimental — a "test" message to a
+using the user's own number for anything experimental - a "test" message to a
 live lead is a real cold text with real exposure.
 
 If a send fails partway through a confirmed batch, report exactly how many went
@@ -101,28 +108,28 @@ texted twice.
 
 Your reader is a **real estate agent or team lead**, not a developer. They want
 to know what is happening with their leads and their campaigns. Everything else
-in this skill — endpoints, auth, account IDs, status codes — is machinery they
+in this skill - endpoints, auth, account IDs, status codes - is machinery they
 neither know about nor need to.
 
 **Never say, in user-facing output:** proxy, endpoint, API, request, payload,
 HTTP status code, `/identity`, account ID, Basic/Bearer, rate limit, cloud
 function, or the name of any config field. Do not narrate the plumbing
-("calling /identity to derive the account, then querying smart lists…") — just
+("calling /identity to derive the account, then querying smart lists…") - just
 do it and report what you found.
 
 When something fails, say what it means for them and what they can do about it:
 
 | What actually happened | What you tell them |
 |---|---|
-| 401 from FUB | "I can't get into your Follow Up Boss account — the key may have been reset. You can update it in the plugin settings." |
+| 401 from FUB | "I can't get into your Follow Up Boss account - the key may have been reset. You can update it in the plugin settings." |
 | 403, account not registered | "This Follow Up Boss account isn't set up for Texting Betty yet. Support can enable it." |
-| 502 / timeout | "Texting Betty isn't responding right now — worth trying again in a few minutes." |
-| Every request fails with no response at all, not a FUB error | "I can't reach Follow Up Boss at all right now — this looks like a network permission issue on this Claude account, not something wrong with your FUB account. If you're on a team plan, your workspace admin needs to allow access; otherwise it's in your own Claude network settings." |
+| 502 / timeout | "Texting Betty isn't responding right now - worth trying again in a few minutes." |
+| Every request fails with no response at all, not a FUB error | "I can't reach Follow Up Boss at all right now - this looks like a network permission issue on this Claude account, not something wrong with your FUB account. If you're on a team plan, your workspace admin needs to allow access; otherwise it's in your own Claude network settings." |
 | Empty conversation | "No text history with this contact yet." |
-| Nothing configured | "I need your Follow Up Boss API key first — you can paste it in the plugin settings." |
+| Nothing configured | "I need your Follow Up Boss API key first - you can paste it in the plugin settings." |
 
 Never show a raw error body, a stack trace, or a JSON blob unless they ask to
-see it. If you truly cannot proceed, say so plainly in one sentence and stop —
+see it. If you truly cannot proceed, say so plainly in one sentence and stop -
 do not improvise a workaround or ask them for a credential this toolkit does
 not use.
 
@@ -153,19 +160,19 @@ A note with the tag at the end (or missing) is ignored by TB.
 ## API call
 
 `curl` is blocked in this environment, and Python needs an explicit CA file
-or TLS verification fails. Both are handled below — use this shape.
+or TLS verification fails. Both are handled below - use this shape.
 
 ```python
 import base64, json, ssl, urllib.request
 
 CTX = ssl.create_default_context(cafile="/etc/ssl/cert.pem")
 KEY = "${user_config.fub_api_key}"
-BASE = "https://api.followupboss.com/v1"   # generic host — no subdomain needed
+BASE = "https://api.followupboss.com/v1"   # generic host - no subdomain needed
 H = {
     "Authorization": "Basic " + base64.b64encode((KEY + ":").encode()).decode(),
     "Content-Type": "application/json",
 }
-# Do NOT add "X-System": "fub-spa" — that impersonates FUB's own web app
+# Do NOT add "X-System": "fub-spa" - that impersonates FUB's own web app
 # and can get the account flagged. Set X-System/X-System-Key only if FUB
 # issued you an integration identifier.
 
@@ -181,8 +188,8 @@ with urllib.request.urlopen(req, context=CTX, timeout=30) as r:
 ```
 
 The `/identity` check matters more here than anywhere else in this plugin:
-a key from the wrong FUB account will happily create a note — and send a
-real text — against a contact in a **different tenant**. Verify first.
+a key from the wrong FUB account will happily create a note - and send a
+real text - against a contact in a **different tenant**. Verify first.
 
 ## Tag reference
 
@@ -198,13 +205,17 @@ real text — against a contact in a **different tenant**. Verify first.
 
 1. Confirm the contact: `GET /api/v1/people/{id}?fields=allFields` (same Basic auth). Check name and phone so the message goes to the right person.
 2. Note the `AI OFF` tag if present: it disables AI replies but does not block outbound sends.
+3. **No em-dashes in the message body** - whether the wording came from the
+   user verbatim or got drafted/adjusted here. Swap any em-dash for a
+   hyphen (or restructure the sentence) before sending, and mention the
+   change when reading the message back for confirmation.
 
 ## Verifying the send
 
-- This toolkit can't read the conversation back through FUB directly — those internal endpoints are out of scope. **Do not ask the user for a browser cookie to work around it.**
+- This toolkit can't read the conversation back through FUB directly - those internal endpoints are out of scope. **Do not ask the user for a browser cookie to work around it.**
 - Instead use the conversation proxy:
   - `POST https://tb-proxy.vercel.app/api/conversation`
-  - Header `Authorization: Bearer ${user_config.fub_api_key}` (Bearer here, Basic for FUB — same key, different scheme)
+  - Header `Authorization: Bearer ${user_config.fub_api_key}` (Bearer here, Basic for FUB - same key, different scheme)
   - Body `{"personid": "<id>"}`
   - There is no owner email to pass; the proxy derives the routing key from your API key.
 - The DB syncs after TB actually sends, so allow a minute or two before checking. An immediate empty result does not mean failure.

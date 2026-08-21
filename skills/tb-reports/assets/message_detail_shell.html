@@ -1,0 +1,138 @@
+<title>%%TITLE%%</title>
+<style>
+ .tb-report{color-scheme:light;
+ --tb-brand-primary:#F07E54;--tb-brand-accent:#FFBF23;--tb-brand-ink:#1D1D1B;--tb-brand-text:#4B5563;
+ --tb-series-1:#ef7345;--tb-series-2:#916700;
+ --tb-good:#0ca30c;--tb-critical:#d03b3b;--tb-warning-bg:rgba(255,191,35,.18);--tb-warning-text:#8a6200;
+ --tb-surface:#fcfcfb;--tb-page-plane:#f9f9f7;--tb-text-primary:#1D1D1B;--tb-text-secondary:#4B5563;
+ --tb-text-muted:#898781;--tb-gridline:#e1e0d9;--tb-baseline:#c3c2b7;--tb-border:rgba(11,11,11,.10);
+ --tb-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+ *{box-sizing:border-box;font-family:inherit}
+ html,body{font-family:var(--tb-font)}
+ body{margin:0;background:var(--tb-page-plane);color:var(--tb-text-primary)}
+ @media print{ html,body,table,th,td,*{font-family:var(--tb-font)!important} }
+ .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 64px}
+ h1{font-size:22px;font-weight:700;margin:0}
+ .sub{color:var(--tb-text-secondary);font-size:13.5px;margin:5px 0 22px;line-height:1.55}
+ .section-h{font-size:15px;font-weight:700;margin:26px 0 10px;color:var(--tb-text-primary)}
+ .section-h:first-of-type{margin-top:0}
+ .card{background:var(--tb-surface);border:1px solid var(--tb-border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+ .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--tb-text-secondary);margin:0 0 4px}
+ .card .hs{font-size:12.5px;color:var(--tb-text-muted);margin:0 0 15px;line-height:1.5}
+ table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+ thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tb-text-muted);
+ font-weight:600;padding:8px 9px;border-bottom:1px solid var(--tb-gridline)}
+ thead th.num{text-align:right;width:78px}
+ thead th.src{width:150px}
+ thead th:first-child{width:auto}
+ thead th.sortable{cursor:pointer;user-select:none}
+ thead th.sortable:hover{color:var(--tb-text-primary)}
+ thead th.sort-asc::after{content:" \25B2";font-size:9px}
+ thead th.sort-desc::after{content:" \25BC";font-size:9px}
+ tbody td{padding:11px 9px;border-bottom:1px solid var(--tb-gridline);vertical-align:top}
+ tbody tr:last-child td{border-bottom:none}
+ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+ td.rc{font-weight:700}
+ .msg-full{font-size:13px;font-weight:500;line-height:1.5;color:var(--tb-text-primary)}
+ .pill{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:100px;white-space:nowrap;display:inline-block;margin-left:2px}
+ .pill-bad{background:rgba(208,59,59,.12);color:var(--tb-critical)}
+ .pill-watch{background:var(--tb-warning-bg);color:var(--tb-warning-text)}
+ .pill-good{background:rgba(12,163,12,.12);color:var(--tb-good)}
+ .pill-dead{background:rgba(11,11,11,.06);color:var(--tb-text-muted)}
+ tr.tot td{border-top:2px solid var(--tb-baseline);border-bottom:none;padding-top:13px;background:rgba(240,126,84,.06);font-weight:700}
+ .cav{font-size:12.5px;color:var(--tb-text-muted);line-height:1.6;margin:0}
+ footer{text-align:center;font-size:12px;color:var(--tb-text-muted);margin-top:30px}
+</style><div class="tb-report"><div class="wrap">
+<h1>%%TITLE%%</h1>
+<div class="sub">%%SUBTITLE%%</div>
+
+<h2 class="section-h">%%BY_TEMPLATE_SECTION_TITLE%%</h2>
+<div class="card">
+<h2>%%ENOUGH_HEADING%%</h2>
+<p class="hs">%%ENOUGH_SUBTEXT%%</p>
+<table id="judgeableTable"><thead><tr><th>Message</th><th class="src">Source</th><th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
+<th class="num">Engaged rate</th><th class="num">Opt-out rate</th><th class="num">Engaged / opt-out</th></tr></thead>
+<tbody>
+%%ROWS_ENOUGH%%
+</tbody></table></div>
+
+<div class="card">
+<h2>%%NOT_ENOUGH_HEADING%%</h2>
+<p class="hs">%%NOT_ENOUGH_SUBTEXT%%</p>
+<table id="notJudgeableTable"><thead><tr><th>Message</th><th class="src">Source</th><th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
+<th class="num">Engaged rate</th><th class="num">Opt-out rate</th><th class="num">Engaged / opt-out</th></tr></thead>
+<tbody>
+%%ROWS_NOT_ENOUGH%%
+</tbody></table></div>
+
+<h2 class="section-h">%%BY_SOURCE_SECTION_TITLE%%</h2>
+<div class="card">
+<h2>%%SOURCE_ENOUGH_HEADING%%</h2>
+<p class="hs">%%SOURCE_ENOUGH_SUBTEXT%%</p>
+<table id="sourceJudgeableTable"><thead><tr><th>Source</th><th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
+<th class="num">Engaged rate</th><th class="num">Opt-out rate</th><th class="num">Engaged / opt-out</th></tr></thead>
+<tbody>
+%%SOURCE_ROWS_ENOUGH%%
+</tbody></table></div>
+
+<div class="card">
+<h2>%%SOURCE_NOT_ENOUGH_HEADING%%</h2>
+<p class="hs">%%SOURCE_NOT_ENOUGH_SUBTEXT%%</p>
+<table id="sourceNotJudgeableTable"><thead><tr><th>Source</th><th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
+<th class="num">Engaged rate</th><th class="num">Opt-out rate</th><th class="num">Engaged / opt-out</th></tr></thead>
+<tbody>
+%%SOURCE_ROWS_NOT_ENOUGH%%
+</tbody></table></div>
+
+<div class="card"><p class="cav">%%FOOTNOTE%%</p></div>
+<footer>%%FOOTER%%</footer>
+</div></div>
+<script>
+function makeSortable(table, defaultColIdx) {
+  const tbody = table.querySelector('tbody');
+  const pinnedRow = tbody.querySelector('tr.tot, tr.total-row');
+  const ths = Array.from(table.querySelectorAll('thead th'));
+  let sortCol = null, asc = true;
+
+  function cellValue(td) {
+    if (td.hasAttribute('data-v')) {
+      const raw = td.getAttribute('data-v');
+      const n = parseFloat(raw);
+      return isNaN(n) ? raw : n;
+    }
+    const t = td.textContent.trim();
+    const n = parseFloat(t.replace(/[^0-9.\-]/g, ''));
+    return isNaN(n) ? t.toLowerCase() : n;
+  }
+
+  function doSort(colIdx) {
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => r !== pinnedRow);
+    rows.sort((a, b) => {
+      const va = cellValue(a.children[colIdx]), vb = cellValue(b.children[colIdx]);
+      if (typeof va === 'number' && typeof vb === 'number') return asc ? va - vb : vb - va;
+      return asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    });
+    rows.forEach(r => tbody.insertBefore(r, pinnedRow || null));
+    ths.forEach((th, i) => {
+      th.classList.toggle('sort-asc', i === colIdx && asc);
+      th.classList.toggle('sort-desc', i === colIdx && !asc);
+    });
+  }
+
+  ths.forEach((th, i) => {
+    th.classList.add('sortable');
+    th.addEventListener('click', () => {
+      if (sortCol === i) { asc = !asc; } else { sortCol = i; asc = true; }
+      doSort(i);
+    });
+  });
+
+  sortCol = defaultColIdx;
+  asc = true;
+  doSort(defaultColIdx);
+}
+makeSortable(document.getElementById('judgeableTable'), 7);
+makeSortable(document.getElementById('notJudgeableTable'), 7);
+makeSortable(document.getElementById('sourceJudgeableTable'), 6);
+makeSortable(document.getElementById('sourceNotJudgeableTable'), 6);
+</script>

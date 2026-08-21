@@ -1,0 +1,126 @@
+/* Texting Betty report design tokens - light mode only.
+   Source: --e-global-color-* values from textingbetty.com (Elementor globals),
+   provided directly by the client 2026-08-19. Chart-safe steps below are
+   DERIVED from these two brand hues, validated with the dataviz skill's
+   scripts/validate_palette.js (light mode, #ffffff surface). Do not
+   regenerate the derived values without re-running that validator - the
+   two brand hues (coral, gold) sit close together on the hue wheel, so
+   arbitrary re-stepping can silently reintroduce a colorblind-safety
+   failure that only shows up under CVD simulation, not to typical eyes.
+
+   If the client sends an updated CSS file, replace ONLY the "brand
+   source" block below and re-run the validator on the two hues before
+   touching anything downstream.
+*/
+
+.tb-report {
+  color-scheme: light;
+
+  /* ---- Brand source (verbatim from client CSS) ---- */
+  --tb-brand-primary:   #F07E54;  /* --e-global-color-primary, coral */
+  --tb-brand-accent:    #FFBF23;  /* --e-global-color-accent, gold */
+  --tb-brand-ink:       #1D1D1B;  /* --e-global-color-secondary */
+  --tb-brand-text:      #4B5563;  /* --e-global-color-text */
+
+  /* ---- UI chrome: use brand source as-is ----
+     Safe for buttons, pill/badge backgrounds, large fills, borders -
+     anything with enough area and/or a dark-text pairing that contrast
+     against a thin line or small dot is not the concern. */
+  --tb-chrome-primary:  var(--tb-brand-primary);
+  --tb-chrome-accent:   var(--tb-brand-accent);
+
+  /* ---- Chart-safe categorical (validated) ----
+     Same two brand hues, depth-stepped asymmetrically so they clear
+     the colorblind-adjacency check (raw brand hues are too close in
+     hue angle to pass at matched lightness). Use ONLY for thin marks:
+     bars, lines, dots, legend swatches. Do not substitute the raw
+     brand hex here. */
+  --tb-series-1:        #ef7345;  /* coral, barely stepped from brand */
+  --tb-series-2:        #916700;  /* gold, stepped deeper for separation */
+
+  /* ---- Status (functional, not brand identity) ----
+     Always pair with an icon + text label, never color alone -
+     these fail a direct-adjacency check against each other (classic
+     red/green confusion) and are only safe used as isolated,
+     labeled signals (a pill, a checkmark + word), never as two
+     marks compared side by side. */
+  --tb-good:            #0ca30c;
+  --tb-critical:        #d03b3b;
+  --tb-warning-bg:      rgba(255, 191, 35, 0.18); /* brand gold, as a wash */
+  --tb-warning-text:    #8a6200;                   /* chart-safe gold, for text on the wash */
+
+  /* ---- Ratio numbers & links (distinct from the good/critical pair) ----
+     A ratio like "engaged per opt-out" reads on a blue-vs-red axis, not
+     green-vs-red - keeps it visually distinct from the pill system so a
+     reader doesn't conflate "this number is positive" with "this row
+     passed a pill check." Also doubles as the link color for anchor
+     navigation (overview row -> detail section). */
+  --tb-ratio-pos:       #2a78d6;
+
+  /* ---- Surfaces & ink ---- */
+  --tb-surface:         #fcfcfb;
+  --tb-page-plane:      #f9f9f7;
+  --tb-text-primary:    var(--tb-brand-ink);
+  --tb-text-secondary:  var(--tb-brand-text);
+  --tb-text-muted:      #898781;
+  --tb-gridline:        #e1e0d9;
+  --tb-baseline:        #c3c2b7;
+  --tb-border:          rgba(11, 11, 11, 0.10);
+
+  /* ---- Type ----
+     "Segoe UI" was the one font name the client gave; treated here as
+     part of a standard system stack pending the full CSS file. */
+  --tb-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Reusable primitives - copy into a report's <style> block and reference
+   these var() names; do not hand-roll new hex values per report. */
+
+.tb-report { font-family: var(--tb-font); background: var(--tb-page-plane); color: var(--tb-text-primary); }
+
+/* Print/PDF export can silently fall back to a serif default (Times) if
+   the export pipeline applies its own print stylesheet and the page only
+   sets font-family on body, relying on inheritance - some export paths
+   don't honor that. Every shell in assets/ carries this same three-line
+   defense; keep it if you add a new shell rather than dropping it as
+   "redundant" - it isn't, until proven otherwise on the actual export
+   path in use. */
+* { font-family: inherit; }
+html, body { font-family: var(--tb-font); }
+@media print { html, body, table, th, td, * { font-family: var(--tb-font) !important; } }
+
+.tb-card {
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+}
+
+.tb-pill {
+  font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 100px;
+  white-space: nowrap; display: inline-block; margin-left: 2px;
+}
+.tb-pill-good     { background: rgba(12,163,12,.12);  color: var(--tb-good); }
+.tb-pill-watch    { background: var(--tb-warning-bg);  color: var(--tb-warning-text); }
+.tb-pill-bad      { background: rgba(208,59,59,.12);  color: var(--tb-critical); }
+.tb-pill-dead     { background: rgba(11,11,11,.06);   color: var(--tb-text-muted); }
+.tb-pill-mid      { background: rgba(42,120,214,.10); color: var(--tb-ratio-pos); }
+
+.tb-btn-primary {
+  background: var(--tb-chrome-primary); color: var(--tb-brand-ink);
+  border: none; border-radius: 10px; font-weight: 700; padding: 10px 18px;
+}
+.tb-btn-accent {
+  background: var(--tb-chrome-accent); color: var(--tb-brand-ink);
+  border: none; border-radius: 10px; font-weight: 700; padding: 10px 18px;
+}
+
+/* Chart marks - bars/lines/dots use these two slots, in this order,
+   never cycled. A 3rd series does not exist in this brand's validated
+   palette; fold it into "Other," facet into small multiples, or ask
+   the client for a 3rd brand hue before inventing one. */
+.tb-series-1-fill { fill: var(--tb-series-1); }
+.tb-series-2-fill { fill: var(--tb-series-2); }
+.tb-series-1-stroke { stroke: var(--tb-series-1); }
+.tb-series-2-stroke { stroke: var(--tb-series-2); }

@@ -1,0 +1,192 @@
+<title>%%TITLE%%</title>
+<style>
+ .tb-report{color-scheme:light;
+ --tb-brand-primary:#F07E54;--tb-brand-accent:#FFBF23;--tb-brand-ink:#1D1D1B;--tb-brand-text:#4B5563;
+ --tb-good:#0ca30c;--tb-critical:#d03b3b;--tb-warning-bg:rgba(255,191,35,.18);--tb-warning-text:#8a6200;
+ --tb-ratio-pos:#2a78d6;
+ --tb-surface:#fcfcfb;--tb-page-plane:#f9f9f7;--tb-text-primary:#1D1D1B;--tb-text-secondary:#4B5563;
+ --tb-text-muted:#898781;--tb-gridline:#e1e0d9;--tb-baseline:#c3c2b7;--tb-border:rgba(11,11,11,.10);
+ --tb-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+ *{box-sizing:border-box;font-family:inherit}
+ html,body{font-family:var(--tb-font)}
+ body{margin:0;background:var(--tb-page-plane);color:var(--tb-text-primary)}
+ @media print{ html,body,table,th,td,*{font-family:var(--tb-font)!important} }
+ .wrap{max-width:1240px;margin:0 auto;padding:28px 20px 64px}
+ h1{font-size:22px;font-weight:700;margin:0}
+ .sub{color:var(--tb-text-secondary);font-size:13.5px;margin:5px 0 22px;line-height:1.55}
+ .card{background:var(--tb-surface);border:1px solid var(--tb-border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+ .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--tb-text-secondary);margin:0 0 4px}
+ .card .hs{font-size:12.5px;color:var(--tb-text-muted);margin:0 0 15px;line-height:1.5}
+ table{width:100%;border-collapse:collapse;font-size:13px;table-layout:auto}
+ thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tb-text-muted);
+ font-weight:600;padding:8px 9px;border-bottom:1px solid var(--tb-gridline)}
+ thead th.num{text-align:right;width:74px}
+ thead th.seqh{width:78px}
+ thead th:first-child{width:auto}
+ tbody td{padding:11px 9px;border-bottom:1px solid var(--tb-gridline);vertical-align:top}
+ tbody tr:last-child td{border-bottom:none}
+ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+ td.rc{font-weight:700}
+ td.seq{white-space:nowrap;padding-top:12px}
+ .seqn{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:6px;
+   background:rgba(42,120,214,.10);color:var(--tb-ratio-pos);font-weight:700;font-size:11.5px}
+ .seqd{display:block;font-size:10.5px;color:var(--tb-text-muted);margin-top:4px}
+ .msg-full{font-size:13px;font-weight:500;line-height:1.5;color:var(--tb-text-primary)}
+ .note{font-size:12px;color:var(--tb-text-secondary);line-height:1.5;margin-top:6px;max-width:640px}
+ .pill{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:100px;white-space:nowrap;display:inline-block;margin:0 0 3px}
+ .pill+.pill{margin-left:5px}
+ .pill-bad{background:rgba(208,59,59,.12);color:var(--tb-critical)}
+ .pill-watch{background:var(--tb-warning-bg);color:var(--tb-warning-text)}
+ .pill-good{background:rgba(12,163,12,.12);color:var(--tb-good)}
+ .pill-mid{background:rgba(42,120,214,.10);color:var(--tb-ratio-pos)}
+ .pill-dead{background:rgba(11,11,11,.06);color:var(--tb-text-muted)}
+ tr.tot td{border-top:2px solid var(--tb-baseline);border-bottom:none;padding-top:13px;background:rgba(42,120,214,.05);font-weight:700}
+ tr.v-flag td{background:rgba(208,59,59,.035)}
+ tr.v-thin td{opacity:.72}
+ tr.v-silent td{opacity:.82}
+ .cav{font-size:12.5px;color:var(--tb-text-muted);line-height:1.6;margin:0}
+ .cav strong{color:var(--tb-text-secondary)}
+ footer{text-align:center;font-size:12px;color:var(--tb-text-muted);margin-top:30px}
+ .planhead{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+ .planname{font-size:15px;color:var(--tb-text-primary);font-weight:700;margin:0 0 3px}
+ .planstats{display:flex;gap:20px}
+ .planstats div{text-align:right}
+ .planstats .k{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--tb-text-muted)}
+ .planstats .v{display:block;font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
+ .planstats .s{display:block;font-size:11px;color:var(--tb-text-muted)}
+ .read{font-size:12.5px;color:var(--tb-text-primary);line-height:1.55;margin:8px 0 0;max-width:680px;
+   border-left:2px solid var(--tb-ratio-pos);padding-left:10px}
+ .legend{display:flex;flex-wrap:wrap;gap:14px 22px;margin:2px 0 0}
+ .legend div{font-size:12px;color:var(--tb-text-secondary);line-height:1.5;max-width:330px}
+ .legend .pill{display:block;width:fit-content;margin:0 0 3px}
+ .card.plan{padding-top:16px}
+ .toggle{display:inline-flex;border:1px solid var(--tb-border);border-radius:9px;overflow:hidden;margin:0 0 18px}
+ .toggle button{font:inherit;font-size:12.5px;padding:7px 14px;border:0;background:var(--tb-surface);
+   color:var(--tb-text-secondary);cursor:pointer}
+ .toggle button.on{background:var(--tb-ratio-pos);color:#fff;font-weight:600}
+ .win{display:none} .win.on{display:block}
+ a{color:var(--tb-ratio-pos);text-decoration:none} a:hover{text-decoration:underline}
+</style><div class="tb-report"><div class="wrap">
+<h1>%%TITLE%%</h1>
+<div class="sub">%%SUBTITLE%%</div>
+
+<div class="card">
+<h2>What the labels mean</h2>
+<p class="hs">Each message carries every label that applies, worst news first. They're
+set against that plan's own average, so "high" means high for this drip, not high in
+the abstract. Definitions come from shared_pipeline.md §10 - keep this legend and that
+file in sync if the thresholds ever change.</p>
+<div class="legend">
+  <div><span class="pill pill-bad">High opt-out</span>Its opt-out rate is well above the plan average, and not just noise at this volume.</div>
+  <div><span class="pill pill-bad">More opt-outs than replies</span>It loses more contacts than it earns conversations.</div>
+  <div><span class="pill pill-watch">Low engagement</span>Its reply rate is well below the plan average.</div>
+  <div><span class="pill pill-watch">No replies</span>Nobody replied, but some contacts did opt out.</div>
+  <div><span class="pill pill-good">Strong reply rate</span>Its reply rate is well above the plan average.</div>
+  <div><span class="pill pill-good">Zero opt-outs</span>Enough sends to matter, and nobody asked to stop.</div>
+  <div><span class="pill pill-mid">In line with the plan</span>Nothing stands out either way.</div>
+  <div><span class="pill pill-dead">No response at all</span>Enough sends to matter, not one reply and not one opt-out.</div>
+  <div><span class="pill pill-dead">Not enough volume</span>Below the response/volume floor, so nothing can be read into it.</div>
+</div></div>
+
+<div class="toggle">
+  <button data-t="w1" class="on">%%WINDOW_1_LABEL%%</button>
+  <button data-t="w2">%%WINDOW_2_LABEL%%</button>
+</div>
+
+<section class="win on" data-win="w1">
+<div class="card">
+<h2>Every action plan, biggest first</h2>
+<p class="hs">%%WINDOW_1_CAVEAT%%</p>
+<table><thead><tr><th>Action plan</th><th class="num">Steps</th><th class="num">Sent</th><th class="num">Engaged</th>
+<th class="num">Opt-outs</th><th class="num">Eng rate</th><th class="num">Opt rate</th><th class="num">Eng / opt</th></tr></thead>
+<tbody>
+%%WINDOW_1_OVERVIEW_ROWS%%
+%%WINDOW_1_OVERVIEW_TOTALS%%
+</tbody></table></div>
+%%WINDOW_1_PLAN_SECTIONS%%
+</section>
+
+<section class="win" data-win="w2">
+<div class="card">
+<h2>Every action plan, biggest first</h2>
+<p class="hs">%%WINDOW_2_CAVEAT%%</p>
+<table><thead><tr><th>Action plan</th><th class="num">Steps</th><th class="num">Sent</th><th class="num">Engaged</th>
+<th class="num">Opt-outs</th><th class="num">Eng rate</th><th class="num">Opt rate</th><th class="num">Eng / opt</th></tr></thead>
+<tbody>
+%%WINDOW_2_OVERVIEW_ROWS%%
+%%WINDOW_2_OVERVIEW_TOTALS%%
+</tbody></table></div>
+%%WINDOW_2_PLAN_SECTIONS%%
+</section>
+
+<div class="card"><h2>How to read this</h2>
+<p class="cav"><strong>Step order</strong> is the position each message actually lands in for the average contact,
+measured across that automation's whole run rather than just the window shown. The number in the badge is the
+median position the message holds; the line under it is the typical gap since the previous message. Two messages
+sharing a number means the plan branches there, usually one variant per agent.<br>
+<strong>Not enough volume</strong> marks any message below this report's response/volume floor. It's still shown in
+sequence so the whole drip reads in order, but its numbers shouldn't be acted on.<br>
+<strong>Why two windows.</strong> %%WINDOW_RATIONALE%%<br>
+<strong>Replies are attributed</strong> to the last message sent before them, so a reply that arrives after a human
+or the AI assistant has already jumped into the thread counts against whichever of those sent last, not the
+original drip step.<br>
+%%EXTRA_CAVEAT%%</p></div>
+<footer>%%FOOTER%%</footer>
+</div></div>
+<script>
+document.querySelectorAll('.toggle button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.toggle button').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on');
+    document.querySelectorAll('.win').forEach(function(s){
+      s.classList.toggle('on', s.dataset.win === b.dataset.t);
+    });
+  });
+});
+</script>
+
+<!--
+ONE-PLAN-SECTION TEMPLATE - repeat this block for every row in the overview
+table, inside %%WINDOW_N_PLAN_SECTIONS%%. Nothing below is real content;
+every bracketed value is computed per plan, per window. Do not carry any
+one account's real plan names, message text, or numbers into this shell -
+it must stay usable for any account.
+
+<div id="plan-{window}-{rank}"></div>
+<div class="card plan">
+<div class="planhead">
+  <div>
+    <h2 class="planname">{rank}. {plan display name}</h2>
+    <p class="hs">{sends} sends to {contacts} contacts &middot; {n} distinct messages in the sequence
+      &middot; {judgeable_n} with enough responses to judge</p>
+    <p class="read">{one-line computed synthesis - see report_message_detail.md}</p>
+  </div>
+  <div class="planstats">
+    <div><span class="k">Engaged</span><span class="v">{engaged}</span><span class="s">{eng_rate}</span></div>
+    <div><span class="k">Opt-outs</span><span class="v" style="color:var(--tb-critical)">{optouts}</span><span class="s">{opt_rate}</span></div>
+    <div><span class="k">Engaged / opt-out</span><span class="v">{ratio}</span><span class="s">plan-wide</span></div>
+  </div>
+</div>
+<table><thead><tr>
+  <th class="seqh">Step</th><th>Message and what it is doing</th>
+  <th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
+  <th class="num">Eng rate</th><th class="num">Opt rate</th><th class="num">Eng / opt</th>
+</tr></thead><tbody>
+    <tr class="steprow v-{flag|thin|ok|silent}">
+      <td class="seq"><span class="seqn">{median rank}</span><span class="seqd">{gap since previous}</span></td>
+      <td><span class="msg-full">{full message text, quoted}</span> {0+ pills per shared_pipeline §10}
+          <div class="note">{narrative note per shared_pipeline §11, or omit the div if none apply}</div></td>
+      <td class="num">{sent}</td>
+      <td class="num">{engaged}</td>
+      <td class="num" style="color:var(--tb-critical)">{optouts}</td>
+      <td class="num">{eng_rate}</td>
+      <td class="num">{opt_rate}</td>
+      <td class="num rc">{ratio, or "no opt-outs" muted when optouts=0, or "&ndash;" muted when engaged=0 and optouts=0}</td>
+    </tr>
+    <!-- one steprow per distinct message in this plan, in sequence order -->
+  <tr class="tot"><td></td><td>Plan total</td><td class="num">{sent}</td><td class="num">{engaged}</td>
+      <td class="num">{optouts}</td><td class="num">{eng_rate}</td><td class="num">{opt_rate}</td>
+      <td class="num rc">{ratio}</td></tr>
+</tbody></table>
+</div>
+-->
