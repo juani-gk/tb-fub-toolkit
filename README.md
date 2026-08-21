@@ -1,18 +1,20 @@
 # tb-fub-toolkit
 
 Follow Up Boss API reference, reply-check reporting, and outbound SMS
-skills for Texting Betty — packaged as a Claude plugin for use in
+skills for Texting Betty - packaged as a Claude plugin for use in
 **Claude Desktop's Chat tab** (also works in claude.ai web chat).
 
 ## What's inside
 
 | Skill | Purpose |
 |---|---|
+| `tb-overview` | Answers "what can this do" / helps you figure out which of the below you actually want |
 | `fub-api` | Reference for the full FUB REST API (auth, pagination, endpoints, rate limits) |
-| `reply-check` | Pulls and classifies SMS replies from FUB smart lists (opt-outs, warm leads, compliance flags) |
+| `reply-check` | Pulls and classifies SMS replies from FUB smart lists (opt-outs, warm leads, compliance flags, needs-action list) |
 | `tb-send-text` | Sends an outbound SMS by creating a tagged note on a FUB contact |
+| `tb-reports` | Builds branded, sortable HTML reports - opt-outs vs. replies trend, and template/drip performance by both wording and by automation/action plan/person source |
 
-None of the skill files contain literal credentials — every value is a
+None of the skill files contain literal credentials - every value is a
 `${user_config.*}` placeholder that Claude Desktop fills in automatically
 once you configure the plugin.
 
@@ -23,12 +25,12 @@ once you configure the plugin.
 3. Click the "+" button and choose to upload a custom plugin file, then
    select this folder (or a zip of it).
 4. Claude Desktop will prompt you for two things:
-   - **The risk acknowledgement** — a checkbox. Read it; it is short and it is
+   - **The risk acknowledgement** - a checkbox. Read it; it is short and it is
      not boilerplate.
-   - **Your Follow Up Boss API key** — from FUB under **Admin → API**.
+   - **Your Follow Up Boss API key** - from FUB under **Admin → API**.
 
-That is the entire setup. Everything else — account ID, subdomain, and the
-Texting Betty routing key — is derived from the key, so there is nothing else
+That is the entire setup. Everything else - account ID, subdomain, and the
+Texting Betty routing key - is derived from the key, so there is nothing else
 to look up and nothing that can be filled in wrong.
 
 The skills refuse to run until the acknowledgement is ticked. Saying "yes, go
@@ -56,7 +58,7 @@ confirmation, and it will not text a contact tagged as opted out. They make
 accidents much less likely. They are not a substitute for reading what it
 proposes before you say yes.
 
-Type `/` or click "+" in chat afterward to see the three skills available.
+Type `/` or click "+" in chat afterward to see the skills available.
 
 ## Testing locally (no git, no upload)
 
@@ -78,7 +80,7 @@ claude plugin marketplace add ./
 claude plugin install tb-fub-toolkit@tb-fub-local --scope user
 ```
 
-Then set the values — start with obviously fake ones to confirm wiring
+Then set the values - start with obviously fake ones to confirm wiring
 before touching real credentials:
 
 ```bash
@@ -96,7 +98,7 @@ If it echoes `FAKE-KEY`, the wiring works. If it echoes a literal
 `${user_config.fub_api_key}`, the plugin is not configured.
 
 > Use `/plugin configure tb-fub-toolkit` for real credentials rather than
-> `--config` — CLI flags are saved to your shell history in plain text.
+> `--config` - CLI flags are saved to your shell history in plain text.
 
 ## First run
 
@@ -105,17 +107,18 @@ value is missing, it stops and tells you which one and where to set it,
 instead of sending a broken request and surfacing a 401.
 
 A **401** means the API key is invalid or revoked. A **403** means you hit
-an endpoint that API-key auth cannot reach — those are out of scope, and
+an endpoint that API-key auth cannot reach - those are out of scope, and
 the skill will say so instead of trying to route around it.
 
 ## What it can and can't reach
 
 The toolkit connects to Follow Up Boss with your API key, and reads Texting
-Betty conversations through a hosted service. That covers everything the three
-skills do: pulling segments, classifying replies, and sending texts.
+Betty conversations through a hosted service. That covers everything the
+skills do: pulling segments, classifying replies, sending texts, and
+building performance reports from the same conversation data.
 
 A few things in Follow Up Boss are only available to a logged-in browser
-session and not to API keys — the merged timeline view and the inbox among
+session and not to API keys - the merged timeline view and the inbox among
 them. The skills know this and work around it: activity is reconstructed from
 notes, calls, events and tasks, and texts are sent by creating a tagged note
 rather than through the inbox. If you ask for something genuinely out of
@@ -133,7 +136,7 @@ is no extra loading step. One thing to know about how that works:
 - it is **not masked** while you type it into the configuration dialog,
 - it is stored in this app's **local settings in plain text**, not the OS
   keychain,
-- it appears **in Claude's context whenever a skill runs** — ask Claude to
+- it appears **in Claude's context whenever a skill runs** - ask Claude to
   show you the code it just wrote and the key will be in it.
 
 **Treat a session transcript the way you would treat the key itself.** Don't
@@ -141,7 +144,7 @@ paste one into a ticket or a shared document without redacting it first.
 
 It is your own Follow Up Boss key, so it reaches your account and nothing
 else. You can rotate it in Follow Up Boss at any time and paste the new one
-here — nothing else needs updating.
+here - nothing else needs updating.
 
 ## Reading conversations
 
@@ -151,7 +154,7 @@ your API key identifies which account you are, and the service returns that
 account's conversation with that contact. There is nothing extra to configure.
 
 If it returns a **403**, your Follow Up Boss key is valid but the account
-doesn't have an active Texting Betty subscription — get in touch and we'll
+doesn't have an active Texting Betty subscription - get in touch and we'll
 sort it out.
 
 > **One limitation worth knowing.** Texting Betty organises messages by the
@@ -159,13 +162,13 @@ sort it out.
 > of your team's numbers, a report may be based on part of the conversation
 > rather than all of it. The skill is instructed to flag this, but when a
 > report says a lead is waiting on a reply, confirm it in Follow Up Boss
-> before acting — a teammate may have already answered from another number.
+> before acting - a teammate may have already answered from another number.
 
 ## Updating a credential
 
 Open the plugin's settings from **Customize → Plugins → tb-fub-toolkit**
 and edit the value directly. Rotating your FUB API key needs no other
-change here — the proxy identifies you by account, not by key, so a new key
+change here - the proxy identifies you by account, not by key, so a new key
 for the same account keeps working.
 
 ## Rotating secrets
