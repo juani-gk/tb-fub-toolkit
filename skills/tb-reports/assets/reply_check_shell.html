@@ -1,0 +1,108 @@
+<title>%%TITLE%%</title>
+<style>
+ .tb-report{color-scheme:light;
+ --tb-brand-primary:#F07E54;--tb-brand-accent:#FFBF23;--tb-brand-ink:#1D1D1B;--tb-brand-text:#4B5563;
+ --tb-good:#0ca30c;--tb-critical:#d03b3b;--tb-warning-bg:rgba(255,191,35,.18);--tb-warning-text:#8a6200;
+ --tb-ratio-pos:#2a78d6;
+ --tb-surface:#fcfcfb;--tb-page-plane:#f9f9f7;--tb-text-primary:#1D1D1B;--tb-text-secondary:#4B5563;
+ --tb-text-muted:#898781;--tb-gridline:#e1e0d9;--tb-baseline:#c3c2b7;--tb-border:rgba(11,11,11,.10);
+ --tb-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+ font-family:var(--tb-font);}
+ *{box-sizing:border-box;font-family:inherit}
+ body{margin:0;background:var(--tb-page-plane);color:var(--tb-text-primary)}
+ .wrap{max-width:980px;margin:0 auto;padding:28px 20px 64px}
+ h1{font-size:22px;font-weight:700;margin:0}
+ .sub{color:var(--tb-text-secondary);font-size:13.5px;margin:5px 0 4px;line-height:1.55}
+ .asof{color:var(--tb-text-muted);font-size:12px;margin:0 0 20px}
+ .kpis{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:20px}
+ .kpi{background:var(--tb-surface);border:1px solid var(--tb-border);border-radius:12px;padding:14px 18px;min-width:120px}
+ .kpi .k{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--tb-text-muted)}
+ .kpi .v{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
+ .kpi .s{display:block;font-size:11px;color:var(--tb-text-muted)}
+ .card{background:var(--tb-surface);border:1px solid var(--tb-border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+ .card.flags{border-color:rgba(208,59,59,.35);background:rgba(208,59,59,.04)}
+ .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--tb-text-secondary);margin:0 0 4px}
+ .card.flags h2{color:var(--tb-critical)}
+ .card .hs{font-size:12.5px;color:var(--tb-text-muted);margin:0 0 15px;line-height:1.5}
+ table{width:100%;border-collapse:collapse;font-size:13px;table-layout:auto}
+ thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tb-text-muted);
+ font-weight:600;padding:8px 9px;border-bottom:1px solid var(--tb-gridline)}
+ thead th.num{text-align:right;width:100px}
+ tbody td{padding:11px 9px;border-bottom:1px solid var(--tb-gridline);vertical-align:top}
+ tbody tr:last-child td{border-bottom:none}
+ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+ .msg-full{font-size:13px;font-weight:500;line-height:1.5;color:var(--tb-text-primary)}
+ .pill{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:100px;white-space:nowrap;display:inline-block;margin:0 4px 3px 0}
+ .pill-bad{background:rgba(208,59,59,.12);color:var(--tb-critical)}
+ .pill-watch{background:var(--tb-warning-bg);color:var(--tb-warning-text)}
+ .pill-mid{background:rgba(42,120,214,.10);color:var(--tb-ratio-pos)}
+ a{color:var(--tb-ratio-pos);text-decoration:none} a:hover{text-decoration:underline}
+ .cav{font-size:12.5px;color:var(--tb-text-muted);line-height:1.6;margin:0}
+ footer{text-align:center;font-size:12px;color:var(--tb-text-muted);margin-top:30px}
+</style><div class="tb-report"><div class="wrap">
+<h1>%%TITLE%%</h1>
+<div class="sub">%%SUBTITLE%%</div>
+<p class="asof"><strong>As of %%AS_OF%%</strong> - a needs-action list goes stale fast; check it's still current before acting on anything below.</p>
+
+<div class="kpis">
+  <div class="kpi"><span class="k">Replies</span><span class="v">%%KPI_REPLIES%%</span></div>
+  <div class="kpi"><span class="k">Opt-outs</span><span class="v" style="color:var(--tb-critical)">%%KPI_OPTOUTS%%</span><span class="s">%%KPI_OPTOUT_SHARE%%</span></div>
+  <div class="kpi"><span class="k">Needs action</span><span class="v">%%KPI_NEEDS_ACTION%%</span><span class="s">%%KPI_OLDEST_WAITING%%</span></div>
+</div>
+
+%%FLAGS_CARD%%
+
+<div class="card">
+<h2>Needs action today</h2>
+<p class="hs">Sorted oldest-waiting first.</p>
+<table><thead><tr><th>Contact</th><th>Pattern</th><th>Source</th><th>Assigned to</th><th class="num">Waiting</th></tr></thead>
+<tbody>
+%%NEEDS_ACTION_ROWS%%
+</tbody></table></div>
+
+<div class="card">
+<h2>Watch / nurture</h2>
+<p class="hs">Promised callbacks and "check back later" agreements - not urgent, worth tracking.</p>
+<table><thead><tr><th>Contact</th><th>What's expected</th><th class="num">Since</th></tr></thead>
+<tbody>
+%%WATCH_ROWS%%
+</tbody></table></div>
+
+%%SOURCE_BREAKDOWN_CARD%%
+
+<div class="card"><p class="cav">%%FOOTNOTE%%</p></div>
+<footer>%%FOOTER%%</footer>
+</div></div>
+
+<!--
+FLAGS_CARD template (omit the whole card if there are no flags - never
+show an empty "Flags" card):
+
+<div class="card flags">
+<h2>Flags</h2>
+<p class="hs">Compliance complaints, bot detections, list hygiene misses - treat DNC/TCPA as urgent.</p>
+<table><thead><tr><th>Contact</th><th>Flag</th><th class="num">Since</th></tr></thead>
+<tbody>
+  <tr><td><a href="{fub contact url}">{name}</a></td><td><span class="pill pill-bad">{DNC/TCPA/bot/etc}</span> {one-line context}</td><td class="num">{staleness}</td></tr>
+</tbody></table></div>
+
+SOURCE_BREAKDOWN_CARD template (omit entirely when not asked for a
+comparison - this mirrors reply-check §4 item 5, only include when
+relevant, per shared_pipeline's share-of-repliers caveat):
+
+<div class="card">
+<h2>Source breakdown</h2>
+<p class="hs">Share of repliers, not a conversion rate - a real rate needs how many that source sent to.</p>
+<table><thead><tr><th>Source</th><th class="num">Opt-out share</th><th class="num">Warm/booking share</th></tr></thead>
+<tbody>
+  <tr><td>{automation/action plan/person name}</td><td class="num">{pct}</td><td class="num">{pct}</td></tr>
+</tbody></table></div>
+
+NEEDS_ACTION_ROWS / WATCH_ROWS - one <tr> per item:
+
+<tr><td><a href="{fub contact url}">{name}</a></td>
+    <td><span class="pill pill-watch">{unanswered warm reply|unfulfilled promise|scheduling mismatch}</span></td>
+    <td>{automation/action plan/person name}</td>
+    <td>{assigned agent, or "-"}</td>
+    <td class="num">{staleness, e.g. "3d 4h"}</td></tr>
+-->

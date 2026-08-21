@@ -428,6 +428,34 @@ Structure the report exactly like this:
 
 Include FUB contact IDs so a human can jump to `https://<account.domain>.followupboss.com/2/people/view/{id}` - take `account.domain` from the `/identity` call you already made.
 
+### Optional: a shareable report, on request only
+
+**Chat is the default output, always.** This report is inherently
+time-sensitive - "who needs a reply right now" - and its value comes
+from jumping straight from the list into a FUB link mid-conversation.
+Don't build the report below unless the user explicitly asks for
+something shareable or persistent (e.g. "can I share this with my team,"
+"give me a page for this," "something I can send to the office").
+
+**After delivering the plain-text chat report, offer this as a one-line
+question every time** - "Want this as a shareable page too?" - rather
+than waiting for someone to already know the option exists. Ask once,
+after the answer, not before it; don't hold up the actual chat report to
+ask first.
+
+When they do: use `../tb-reports/assets/reply_check_shell.html` (same
+design system as `tb-reports`, same `%%PLACEHOLDER%%` + fragment-only +
+`Artifact`-publish rules documented in `tb-reports/SKILL.md` - read that
+before filling this one in). Map this section's structure directly:
+headline KPIs, the Flags card (omit entirely if there are none - never
+show an empty one), the Needs Action table, Watch/nurture, and the
+optional Source breakdown, same inclusion rule as item 5 above.
+
+**State the "as of" time prominently** - the shell has a placeholder for
+this specifically. A persisted page showing today's action list is
+exactly the kind of thing that misleads if reopened tomorrow and treated
+as current; the timestamp is not decorative here.
+
 ### Diffing runs
 
 When the user asks to "check again" the same day, keep the previous ID snapshot and report only NEW repliers since the last pull, plus status changes on previously flagged threads.
