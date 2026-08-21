@@ -113,8 +113,12 @@ before propagating - see the comment at the top of that file.
   only, never real content from any account.
 - `assets/optouts_vs_replies_shell.html` - KPI row + bar chart + table-view
   toggle for Opt-Outs vs. Replies
+- `assets/reply_check_shell.html` - belongs to `reply-check`, not a
+  `tb-reports` report type; lives here only because the design system
+  does. `reply-check` builds this **on request only**, never by default -
+  see that skill's "Optional: a shareable report" section.
 
-Both use `%%PLACEHOLDER%%` markers. Read the file, replace every
+All four use `%%PLACEHOLDER%%` markers. Read the file, replace every
 placeholder (title, subtitle, row HTML, daily-data JSON, etc.), and render
  - these already encode the mark specs, pill conventions, sortable-column
 JS, and pinned-totals-row behavior worked out against real accounts.
