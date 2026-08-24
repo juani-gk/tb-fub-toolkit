@@ -4,6 +4,7 @@
  --tb-brand-primary:#F07E54;--tb-brand-accent:#FFBF23;--tb-brand-ink:#1D1D1B;--tb-brand-text:#4B5563;
  --tb-series-1:#ef7345;--tb-series-2:#916700;
  --tb-good:#0ca30c;--tb-critical:#d03b3b;--tb-warning-bg:rgba(255,191,35,.18);--tb-warning-text:#8a6200;
+ --tb-ratio-pos:#2a78d6;
  --tb-surface:#fcfcfb;--tb-page-plane:#f9f9f7;--tb-text-primary:#1D1D1B;--tb-text-secondary:#4B5563;
  --tb-text-muted:#898781;--tb-gridline:#e1e0d9;--tb-baseline:#c3c2b7;--tb-border:rgba(11,11,11,.10);
  --tb-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -32,64 +33,229 @@
  tbody tr:last-child td{border-bottom:none}
  td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
  td.rc{font-weight:700}
+ td.muted{color:var(--tb-text-muted);font-weight:400}
  .msg-full{font-size:13px;font-weight:500;line-height:1.5;color:var(--tb-text-primary)}
  .pill{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:100px;white-space:nowrap;display:inline-block;margin-left:2px}
  .pill-bad{background:rgba(208,59,59,.12);color:var(--tb-critical)}
  .pill-watch{background:var(--tb-warning-bg);color:var(--tb-warning-text)}
  .pill-good{background:rgba(12,163,12,.12);color:var(--tb-good)}
+ .pill-mid{background:rgba(42,120,214,.10);color:var(--tb-ratio-pos)}
  .pill-dead{background:rgba(11,11,11,.06);color:var(--tb-text-muted)}
  tr.tot td{border-top:2px solid var(--tb-baseline);border-bottom:none;padding-top:13px;background:rgba(240,126,84,.06);font-weight:700}
  .cav{font-size:12.5px;color:var(--tb-text-muted);line-height:1.6;margin:0}
  footer{text-align:center;font-size:12px;color:var(--tb-text-muted);margin-top:30px}
+ .empty{font-size:12.5px;color:var(--tb-text-muted);margin:0;padding:4px 0 2px}
 </style><div class="tb-report"><div class="wrap">
-<h1>%%TITLE%%</h1>
-<div class="sub">%%SUBTITLE%%</div>
+<h1 data-f="title"></h1>
+<div class="sub" data-f="subtitle"></div>
 
-<h2 class="section-h">%%BY_TEMPLATE_SECTION_TITLE%%</h2>
+<h2 class="section-h" data-f="byTemplate.sectionTitle"></h2>
 <div class="card">
-<h2>%%ENOUGH_HEADING%%</h2>
-<p class="hs">%%ENOUGH_SUBTEXT%%</p>
+<h2 data-f="byTemplate.judgeable.heading"></h2>
+<p class="hs" data-f="byTemplate.judgeable.subtext"></p>
 <table id="judgeableTable"><thead><tr><th>Message</th><th class="src">Source</th><th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
 <th class="num">Engaged rate</th><th class="num">Opt-out rate</th><th class="num">Engaged / opt-out</th></tr></thead>
-<tbody>
-%%ROWS_ENOUGH%%
-</tbody></table></div>
+<tbody></tbody></table></div>
 
 <div class="card">
-<h2>%%NOT_ENOUGH_HEADING%%</h2>
-<p class="hs">%%NOT_ENOUGH_SUBTEXT%%</p>
+<h2 data-f="byTemplate.notJudgeable.heading"></h2>
+<p class="hs" data-f="byTemplate.notJudgeable.subtext"></p>
 <table id="notJudgeableTable"><thead><tr><th>Message</th><th class="src">Source</th><th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
 <th class="num">Engaged rate</th><th class="num">Opt-out rate</th><th class="num">Engaged / opt-out</th></tr></thead>
-<tbody>
-%%ROWS_NOT_ENOUGH%%
-</tbody></table></div>
+<tbody></tbody></table></div>
 
-<h2 class="section-h">%%BY_SOURCE_SECTION_TITLE%%</h2>
+<h2 class="section-h" data-f="bySource.sectionTitle"></h2>
 <div class="card">
-<h2>%%SOURCE_ENOUGH_HEADING%%</h2>
-<p class="hs">%%SOURCE_ENOUGH_SUBTEXT%%</p>
+<h2 data-f="bySource.judgeable.heading"></h2>
+<p class="hs" data-f="bySource.judgeable.subtext"></p>
 <table id="sourceJudgeableTable"><thead><tr><th>Source</th><th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
 <th class="num">Engaged rate</th><th class="num">Opt-out rate</th><th class="num">Engaged / opt-out</th></tr></thead>
-<tbody>
-%%SOURCE_ROWS_ENOUGH%%
-</tbody></table></div>
+<tbody></tbody></table></div>
 
 <div class="card">
-<h2>%%SOURCE_NOT_ENOUGH_HEADING%%</h2>
-<p class="hs">%%SOURCE_NOT_ENOUGH_SUBTEXT%%</p>
+<h2 data-f="bySource.notJudgeable.heading"></h2>
+<p class="hs" data-f="bySource.notJudgeable.subtext"></p>
 <table id="sourceNotJudgeableTable"><thead><tr><th>Source</th><th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
 <th class="num">Engaged rate</th><th class="num">Opt-out rate</th><th class="num">Engaged / opt-out</th></tr></thead>
-<tbody>
-%%SOURCE_ROWS_NOT_ENOUGH%%
-</tbody></table></div>
+<tbody></tbody></table></div>
 
-<div class="card"><p class="cav">%%FOOTNOTE%%</p></div>
-<footer>%%FOOTER%%</footer>
+<div class="card"><p class="cav" data-f="footnote"></p></div>
+<footer data-f="footer"></footer>
 </div></div>
 <script>
+/* ---------------------------------------------------------------------------
+   ONE placeholder holds the whole report. Replace %%REPORT_DATA%% with a JSON
+   object of raw COUNTS and text - never with rendered HTML, and never with a
+   rate, a ratio, or a totals row: every one of those is computed below, from
+   the counts, so the totals can never disagree with the rows above them.
+
+   {
+     "title": "...", "subtitle": "...",
+     "byTemplate": {
+       "sectionTitle": "...",
+       "judgeable":    { "heading": "...", "subtext": "...", "rows": [...] },
+       "notJudgeable": { "heading": "...", "subtext": "...", "rows": [...] }
+     },
+     "bySource": { ...same four keys, rows use "source" as their label... },
+     "footnote": "...", "footer": "..."
+   }
+
+   A byTemplate row:  {"message":"full text","source":"name","sent":120,
+                       "engaged":9,"optouts":3,"pills":["high-optout"]}
+   A bySource row:    {"source":"name","sent":120,"engaged":9,"optouts":3,
+                       "pills":["in-line"]}
+
+   "source" may be an array when one wording came from more than one plan
+   (report_message_detail.md, Table 1) - it renders comma-joined.
+   "pills" holds KEYS from PILL_SPEC below, not markup, and may be omitted
+   or empty. All text is inserted with textContent, so quotes, angle
+   brackets and ampersands in real message bodies are safe as-is.
+--------------------------------------------------------------------------- */
+const DATA = %%REPORT_DATA%%;
+
+const PILL_SPEC = {
+  "high-optout":       ["bad",   "High opt-out"],
+  "more-optouts":      ["bad",   "More opt-outs than replies"],
+  "low-engagement":    ["watch", "Low engagement"],
+  "no-replies":        ["watch", "No replies"],
+  "strong-reply-rate": ["good",  "Strong reply rate"],
+  "zero-optouts":      ["good",  "Zero opt-outs"],
+  "in-line":           ["mid",   "In line with the group"],
+  "no-response":       ["dead",  "No response at all"],
+  "not-enough-volume": ["dead",  "Not enough volume"]
+};
+
+function pick(path) {
+  return path.split('.').reduce(function (o, k) {
+    return (o === null || o === undefined) ? o : o[k];
+  }, DATA);
+}
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined && text !== null) n.textContent = String(text);
+  return n;
+}
+
+function rate(part, whole) {
+  return whole > 0 ? (part / whole * 100).toFixed(1) + '%' : '0.0%';
+}
+
+/* Ratio has three display cases, per report_message_detail.md: a real
+   number, "no opt-outs" when nothing opted out but replies came in, and an
+   en dash when neither happened (0/0 is undefined, not zero).
+
+   Sort values are deliberate. "no opt-outs" sorts as Infinity: it is the
+   best possible outcome on this axis. The en-dash case sorts as 0, the same
+   value a row with replies=0 and some opt-outs gets - both earned nothing,
+   which is what this column measures. Do NOT give it a negative sort value
+   to force it to the top: that would rank "cost nothing, earned nothing"
+   above a message actively bleeding opt-outs, in a table whose entire
+   premise is worst-performers-first. The pill already says which is which. */
+function ratioCell(engaged, optouts) {
+  const td = el('td', 'num rc');
+  if (optouts > 0) {
+    td.textContent = (engaged / optouts).toFixed(1);
+    td.setAttribute('data-v', engaged / optouts);
+  } else if (engaged > 0) {
+    td.textContent = 'no opt-outs';
+    td.className = 'num rc muted';
+    td.setAttribute('data-v', 'Infinity');
+  } else {
+    td.textContent = '–';
+    td.className = 'num rc muted';
+    td.setAttribute('data-v', '0');
+  }
+  return td;
+}
+
+function numCell(v, critical) {
+  const td = el('td', 'num', v);
+  td.setAttribute('data-v', v);
+  if (critical) td.style.color = 'var(--tb-critical)';
+  return td;
+}
+
+function pillsInto(td, keys) {
+  (keys || []).forEach(function (k) {
+    const spec = PILL_SPEC[k];
+    if (!spec) { console.warn('Unknown pill key: ' + k); }
+    const p = el('span', 'pill pill-' + (spec ? spec[0] : 'mid'), spec ? spec[1] : k);
+    td.appendChild(document.createTextNode(' '));
+    td.appendChild(p);
+  });
+}
+
+function labelOf(row) {
+  const s = row.source;
+  return Array.isArray(s) ? s.join(', ') : (s || '');
+}
+
+/* kind: 'template' renders Message + Source (8 cols); 'source' renders one
+   Source column (7 cols). Everything after the label columns is identical. */
+function renderRows(tableId, rows, kind) {
+  const tbody = document.querySelector('#' + tableId + ' tbody');
+  const cols = kind === 'template' ? 8 : 7;
+  rows = rows || [];
+
+  if (!rows.length) {
+    const tr = document.createElement('tr');
+    const td = el('td', '', '');
+    td.colSpan = cols;
+    td.appendChild(el('p', 'empty', 'Nothing in this group for the window shown.'));
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  let tSent = 0, tEng = 0, tOpt = 0;
+
+  rows.forEach(function (r) {
+    const sent = r.sent || 0, eng = r.engaged || 0, opt = r.optouts || 0;
+    tSent += sent; tEng += eng; tOpt += opt;
+
+    const tr = document.createElement('tr');
+
+    if (kind === 'template') {
+      const td = document.createElement('td');
+      td.appendChild(el('span', 'msg-full', r.message || ''));
+      pillsInto(td, r.pills);
+      td.setAttribute('data-v', (r.message || '').toLowerCase());
+      tr.appendChild(td);
+      tr.appendChild(el('td', '', labelOf(r)));
+    } else {
+      const td = el('td', '', labelOf(r));
+      pillsInto(td, r.pills);
+      td.setAttribute('data-v', labelOf(r).toLowerCase());
+      tr.appendChild(td);
+    }
+
+    tr.appendChild(numCell(sent));
+    tr.appendChild(numCell(eng));
+    tr.appendChild(numCell(opt, true));
+    tr.appendChild(numCell(rate(eng, sent)));
+    tr.appendChild(numCell(rate(opt, sent)));
+    tr.appendChild(ratioCell(eng, opt));
+    tbody.appendChild(tr);
+  });
+
+  const tot = document.createElement('tr');
+  tot.className = 'tot';
+  tot.appendChild(el('td', '', 'Total'));
+  if (kind === 'template') tot.appendChild(el('td', '', ''));
+  tot.appendChild(numCell(tSent));
+  tot.appendChild(numCell(tEng));
+  tot.appendChild(numCell(tOpt));
+  tot.appendChild(numCell(rate(tEng, tSent)));
+  tot.appendChild(numCell(rate(tOpt, tSent)));
+  tot.appendChild(ratioCell(tEng, tOpt));
+  tbody.appendChild(tot);
+}
+
 function makeSortable(table, defaultColIdx) {
   const tbody = table.querySelector('tbody');
-  const pinnedRow = tbody.querySelector('tr.tot, tr.total-row');
+  const pinnedRow = tbody.querySelector('tr.tot');
   const ths = Array.from(table.querySelectorAll('thead th'));
   let sortCol = null, asc = true;
 
@@ -105,22 +271,24 @@ function makeSortable(table, defaultColIdx) {
   }
 
   function doSort(colIdx) {
-    const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => r !== pinnedRow);
-    rows.sort((a, b) => {
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(function (r) {
+      return r !== pinnedRow && r.querySelector('td[data-v]');
+    });
+    rows.sort(function (a, b) {
       const va = cellValue(a.children[colIdx]), vb = cellValue(b.children[colIdx]);
       if (typeof va === 'number' && typeof vb === 'number') return asc ? va - vb : vb - va;
       return asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
     });
-    rows.forEach(r => tbody.insertBefore(r, pinnedRow || null));
-    ths.forEach((th, i) => {
+    rows.forEach(function (r) { tbody.insertBefore(r, pinnedRow || null); });
+    ths.forEach(function (th, i) {
       th.classList.toggle('sort-asc', i === colIdx && asc);
       th.classList.toggle('sort-desc', i === colIdx && !asc);
     });
   }
 
-  ths.forEach((th, i) => {
+  ths.forEach(function (th, i) {
     th.classList.add('sortable');
-    th.addEventListener('click', () => {
+    th.addEventListener('click', function () {
       if (sortCol === i) { asc = !asc; } else { sortCol = i; asc = true; }
       doSort(i);
     });
@@ -130,6 +298,17 @@ function makeSortable(table, defaultColIdx) {
   asc = true;
   doSort(defaultColIdx);
 }
+
+document.querySelectorAll('[data-f]').forEach(function (n) {
+  const v = pick(n.getAttribute('data-f'));
+  n.textContent = (v === null || v === undefined) ? '' : String(v);
+});
+
+renderRows('judgeableTable',          pick('byTemplate.judgeable.rows'),    'template');
+renderRows('notJudgeableTable',       pick('byTemplate.notJudgeable.rows'), 'template');
+renderRows('sourceJudgeableTable',    pick('bySource.judgeable.rows'),      'source');
+renderRows('sourceNotJudgeableTable', pick('bySource.notJudgeable.rows'),   'source');
+
 makeSortable(document.getElementById('judgeableTable'), 7);
 makeSortable(document.getElementById('notJudgeableTable'), 7);
 makeSortable(document.getElementById('sourceJudgeableTable'), 6);

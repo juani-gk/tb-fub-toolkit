@@ -108,9 +108,7 @@ before propagating - see the comment at the top of that file.
   linking into per-plan drill-down sections (sequence order, relative
   grading, narrative notes, dual time-window toggle) - a genuinely
   different layout from a flat sortable table, which is why it's a
-  separate file. Has an HTML-comment template at the bottom showing the
-  exact one-plan-section markup to repeat; that comment is structural
-  only, never real content from any account.
+  separate file.
 - `assets/optouts_vs_replies_shell.html` - KPI row + bar chart + table-view
   toggle for Opt-Outs vs. Replies
 - `assets/reply_check_shell.html` - belongs to `reply-check`, not a
@@ -118,12 +116,46 @@ before propagating - see the comment at the top of that file.
   does. `reply-check` builds this **on request only**, never by default -
   see that skill's "Optional: a shareable report" section.
 
-All four use `%%PLACEHOLDER%%` markers. Read the file, replace every
-placeholder (title, subtitle, row HTML, daily-data JSON, etc.), and render
- - these already encode the mark specs, pill conventions, sortable-column
-JS, and pinned-totals-row behavior worked out against real accounts.
+### How to fill them in - data, never markup
 
-**All three shells are body content, not full documents** - `<title>` +
+**The first three shells take a single JSON blob, not hand-written HTML.**
+`message_detail_shell.html` and `performance_by_action_plan_shell.html`
+have exactly two placeholders each - `%%TITLE%%` and `%%REPORT_DATA%%` -
+and `optouts_vs_replies_shell.html` works the same way with
+`%%DAILY_DATA%%`. Each file's own header comment carries its exact schema;
+read that comment, build the object, substitute it in. Only
+`reply_check_shell.html` still takes per-field placeholders.
+
+This is not a style preference. Writing table rows by hand was the single
+slowest step in producing a report - a drill-down with a dozen plans over
+two windows meant generating hundreds of `<tr>` blocks - and it put
+arithmetic in the least reliable possible place. So:
+
+- **Put raw counts in the JSON. Never a rate, never a ratio, never a
+  totals row, never a plan-level subtotal.** Every one of those is derived
+  in the shell from the counts you supply, which is what makes the totals
+  row structurally incapable of disagreeing with the rows above it. If you
+  catch yourself computing `engaged / sent` to write into the data, stop -
+  that field does not exist.
+- **Grading pills go in as keys, not markup**: `"pills": ["high-optout",
+  "more-optouts"]`. The shell owns the label text and the CSS class. The
+  key list is fixed and maps 1:1 to shared_pipeline §10's ladder - see
+  `PILL_SPEC` in either shell. An unknown key still renders, and warns in
+  the console, so a typo degrades visibly instead of silently.
+- **Don't escape anything.** All text is inserted with `textContent`.
+  Quotes, apostrophes, angle brackets and ampersands in real message
+  bodies go in verbatim, as ordinary JSON strings.
+- **Ordering and anchors are computed.** The action-plan overview sorts
+  biggest-first by Sent and the plan sections follow that same order, with
+  their anchor links generated to match. Supply the plans in any order.
+
+What you still own is everything that needs judgment: the window, the
+threshold calibration and how it's stated, the per-row pill assignment,
+the narrative notes (§11), and the one-line per-plan synthesis. The shells
+already encode the mark specs, pill conventions, sortable-column JS, and
+pinned-totals-row behavior worked out against real accounts.
+
+**All four shells are body content, not full documents** - `<title>` +
 `<style>` + markup + `<script>`, deliberately with no `<!doctype>`,
 `<html>`, `<head>`, or `<body>` tag of their own. That's not a stray
 omission - the `Artifact` tool's own contract requires content-only,
@@ -183,7 +215,13 @@ population/thresholds before offering to schedule it.
 ## Verification before delivering any report
 
 - [ ] Totals row / KPI numbers cross-checked against the raw per-row data
-      (sum the rows yourself, don't trust a single computed pass)
+      (sum the rows yourself, don't trust a single computed pass). For
+      `message_detail_shell.html` and `performance_by_action_plan_shell.html`
+      the shell derives every rate, ratio and total from the counts you
+      supplied, so what needs checking there is the *counts* - that Sent,
+      Engaged and Opt-outs per row match the classified data. For
+      `optouts_vs_replies_shell.html` and `reply_check_shell.html`, check
+      the summed figures too.
 - [ ] Threshold choice stated in the report's own text, with excluded-row
       count and combined volume - never a silent cutoff
 - [ ] Population filter matches the report's actual question (shared_pipeline §2)
