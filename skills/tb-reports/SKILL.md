@@ -116,17 +116,40 @@ before propagating - see the comment at the top of that file.
   does. `reply-check` builds this **on request only**, never by default -
   see that skill's "Optional: a shareable report" section.
 
-### Where the shells live
+### Never name a path to a shell - name the shell
 
-Reference them at `${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/<name>.html`,
-always. `${CLAUDE_PLUGIN_ROOT}` is set for you and points at the installed
-plugin; a relative path like `assets/…` does not resolve, because you are
-working in a scratchpad directory, not in the skill's own folder.
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py \
+    --shell performance_by_action_plan report.json out.html
+```
 
-**Do not copy a shell into your working directory first.** An observed run
-did exactly that - cached both shells into a local `assets_cache/` and then
-wrote its own 21KB renderer to fill them, because the relative path had not
-resolved. Read the shell in place and hand its path to `tb_render.py`.
+`--shell` takes a name, and the script resolves the file next to itself.
+Valid names: `message_detail`, `performance_by_action_plan`,
+`optouts_vs_replies`, `reply_check`.
+
+**Do not search the filesystem for a shell, and do not copy one into your
+working directory.** There are usually several copies of this repo on a
+machine - a checkout, a git worktree, and the installed plugin cache - and
+they are not the same version. Two real runs went wrong here: one copied
+both shells into a local `assets_cache/` and wrote its own 21KB renderer to
+fill them, and another found a stale checkout by filename and filled
+old-format shells from a branch two versions behind, silently shipping the
+wrong report. Naming the shell removes the choice.
+
+### Table 1 and Table 2 are two artifacts, never one page
+
+Publish them separately. **The shells are whole documents, not components** -
+each brings its own `<title>`, `<style>` and `<script>` - and concatenating
+two of them breaks the result in two ways at once: the second one's CSS
+overrides the first's (they deliberately differ, `table-layout: fixed` vs
+`auto`, so the message column stops being constrained and pushes every
+numeric column off the page), and two `const DATA` declarations land in one
+scope, which is a `SyntaxError` that renders a blank page.
+
+This is not hypothetical - a real run merged them and shipped a report with
+its columns hanging off the right edge. `tb_render.py` now refuses input
+that looks pre-merged, but the rule is the fix: one shell, one file, one
+artifact.
 
 ### How to fill them in - data, never markup
 
@@ -199,8 +222,7 @@ generated fresh on every run, not a one-time formatting pass.
 Fill the shell with `${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py` rather than by hand:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py \
-    ${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/<shell>.html report.json out.html
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py --shell <name> report.json out.html
 ```
 
 It substitutes the data object, takes `%%TITLE%%` from its `title` key,

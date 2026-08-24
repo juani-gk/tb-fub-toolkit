@@ -487,7 +487,7 @@ than waiting for someone to already know the option exists. Ask once,
 after the answer, not before it; don't hold up the actual chat report to
 ask first.
 
-When they do: use `${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/reply_check_shell.html` (same
+When they do: render it with `python3 ${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py --shell reply_check` (same
 design system as `tb-reports`, same `%%PLACEHOLDER%%` + fragment-only +
 `Artifact`-publish rules documented in `tb-reports/SKILL.md` - read that
 before filling this one in). Map this section's structure directly:
