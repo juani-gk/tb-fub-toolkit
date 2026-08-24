@@ -49,7 +49,25 @@ SHELLS = ["message_detail", "performance_by_action_plan",
           "optouts_vs_replies", "reply_check"]
 
 
+def announce():
+    """Print which copy of the plugin this is, on every run.
+
+    There are routinely several copies of this repo on a machine and they do
+    not agree. A run that silently used a stale one produced a plausible but
+    wrong report, so every run says which file it is executing and what
+    version that file belongs to."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    manifest = os.path.normpath(os.path.join(here, "..", "..", "..", ".claude-plugin", "plugin.json"))
+    try:
+        with open(manifest) as f:
+            v = json.load(f).get("version", "?")
+    except Exception:
+        v = "unknown (no plugin.json above %s)" % here
+    print("tb-fub-toolkit %s  -  %s" % (v, __file__), file=sys.stderr)
+
+
 def main():
+    announce()
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--shell", required=True, choices=SHELLS,
