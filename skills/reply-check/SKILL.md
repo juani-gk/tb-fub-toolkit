@@ -396,7 +396,14 @@ for; see the Budget section above for how to plan a paced run out loud.
 
 Sort each conversation by timestamp. Split inbound vs outbound.
 
-**First, drop carrier noise from the inbound side - before classifying
+**Derive this account's own opt-out wording before classifying, don't
+assume the list below.** `python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_profile.py suggest --convs conversations.json`
+prints the account's most common short inbound replies, which is where
+opt-out phrasing actually lives - one account trains leads to reply "nomore",
+another "quit", another only ever gets a bare "stop". Add whatever this one
+really uses.
+
+**Then drop carrier noise from the inbound side - before classifying
 anything.** Undelivered-message notices come back on the same inbound
 channel as a real reply and are not one:
 

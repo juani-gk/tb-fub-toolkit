@@ -260,6 +260,12 @@ population/thresholds before offering to schedule it.
 
 ## Verification before delivering any report
 
+- [ ] The shipped scripts did the mechanical work - `tb_fetch.py`,
+      `tb_profile.py`, `tb_render.py`. If you wrote your own fetch, your own
+      threshold arithmetic, or your own renderer, stop and use these instead:
+      every one of them exists because a hand-written version shipped a real
+      bug (a sequential sweep, an uncalibrated floor, a stale shell).
+
 - [ ] Totals row / KPI numbers cross-checked against the raw per-row data
       (sum the rows yourself, don't trust a single computed pass). For
       `message_detail_shell.html` and `performance_by_action_plan_shell.html`

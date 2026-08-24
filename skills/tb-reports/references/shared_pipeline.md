@@ -26,6 +26,38 @@ scratch. Before writing any pattern-matching or threshold code:
 This is the same discipline §8 already applies to volume thresholds,
 extended to every other place a pattern or number appears in this file.
 
+**Do the measurable half with a script, not by reading.** Once §3 has
+fetched conversations:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_profile.py suggest --convs conversations.json
+```
+
+It prints this account's own numbers - drip vs. manual split and the manual
+tally by sender (§5), the drip-length percentiles (§11), the sends-per-source
+distribution with what each candidate floor would exclude (§8), its most
+common short inbound replies (§7, where opt-out wording shows up), and a
+sample of real sends to read for greeting and sign-off shape (§4).
+
+Once you have chosen the patterns and floors, keep them:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_profile.py save --account <id> --from profile.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_profile.py load --account <id> --convs conversations.json
+```
+
+A second run reads the profile instead of re-deriving it, which is where the
+time actually goes. `load` exits non-zero and says why when the profile is
+older than a week or when the account's send volume has moved far from what
+it was calibrated against - treat either as "re-derive", not as a warning to
+scroll past. **Put the `calibration:` line it prints into the report's own
+text**, so a reader can tell how old the numbers behind it are.
+
+That is arithmetic; deriving it by reading messages in context is slow and
+approximate. What the script deliberately does not do is choose. You still
+pick the floor and the length threshold, and §8 still requires you to state
+which one you picked and how much it excludes, in the report's own text.
+
 ## 1. Preflight & auth
 Identical to `reply-check` / `fub-api`: risk acknowledgment + API key
 configuration (Claude Code: `/plugin configure tb-fub-toolkit`; desktop/web:
@@ -216,7 +248,9 @@ makes a high-volume account's report meaningful (50+ sends, 8+ engaged)
 can return an EMPTY report on a smaller account (a real case: the
 busiest template topped out at under 20 sends in the same 30-day
 window). Before applying any volume/response floor:
-1. Compute the actual send-count distribution for the account in hand.
+1. Compute the actual send-count distribution for the account in hand -
+   `tb_profile.py suggest` (file intro) prints it, with a table of candidate
+   floors and the rows and sends each one would drop.
 2. If the intended floor would exclude everything (or nearly everything),
    say so plainly and propose a recalibrated floor sized to what the
    account actually does - then confirm with the user rather than
@@ -320,6 +354,16 @@ confirming against a real sample first, same as §4.
   is its own verdict."
 
 ## Known gotchas checklist (re-check each new report type against this)
+- [ ] Ran the shipped scripts rather than writing your own: `tb_fetch.py`
+      for the population and the conversation sweep (§3), `tb_profile.py`
+      for the distributions behind every threshold (file intro),
+      `tb_render.py --shell <name>` to fill the shell (SKILL.md). Each one
+      exists because hand-written versions repeatedly came out sequential,
+      uncalibrated, or pointed at a stale copy of this repo. **Writing your
+      own is the failure mode, not the fallback.**
+- [ ] Loaded a saved profile if one exists, and re-derived instead of using
+      it when `load` reported it stale or drifted (file intro)
+- [ ] Stated the calibration date in the report when a saved profile was used
 - [ ] Sampled this account's own sent messages before writing any
       pattern-matching regex or picking any content-feature threshold -
       never applied another account's greeting/signature/length example
