@@ -184,6 +184,18 @@ generated fresh on every run, not a one-time formatting pass.
 
 ## Delivery
 
+Fill the shell with `scripts/tb_render.py` rather than by hand:
+
+```bash
+python3 scripts/tb_render.py assets/<shell>.html report.json out.html
+```
+
+It substitutes the data object, takes `%%TITLE%%` from its `title` key,
+accepts `--set NAME=value` for any other placeholder, and **exits with an
+error if any placeholder is left unfilled** - which is the whole point, since
+by hand an unfilled `%%ROWS%%` ships to the reader as literal text in the
+middle of the page.
+
 Published via the `Artifact` tool (load the `artifact-design` skill first,
 per its own rules - it decides how much design polish a given ask
 warrants), passing the filled-in shell **exactly as it is, content-only,
@@ -193,9 +205,8 @@ exactly the persist-by-default case.
 
 If `Artifact` isn't available in the session, say so and fall back to
 writing a file instead - but a bare fragment isn't a valid standalone
-file, so wrap the *same* filled-in content in a minimal document at that
-point: `<!doctype html><html><head><meta charset="utf-8"></head><body>` +
-the fragment + `</body></html>`. Do this wrapping only for the file
+file, so pass `--standalone` to `tb_render.py`, which wraps the same
+content in a minimal document. Use that flag **only** for the file
 fallback, never for the `Artifact` path, and never bake the wrapper into
 the shell files themselves.
 

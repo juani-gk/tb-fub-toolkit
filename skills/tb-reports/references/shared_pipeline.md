@@ -65,12 +65,22 @@ already answers both:**
 window you used in the output so it's correctable.
 
 ## 3. Fetch conversations
-`POST https://tb-proxy.vercel.app/api/conversation`, one contact per call,
-`{"personid": "<id>"}`, `Authorization: Bearer <key>`. ThreadPoolExecutor
-~5-6 workers. Empty `texts` array = no history, not an error. Save a
-resumable results file keyed by contact ID in the working directory (not
-`/tmp`) - this is what makes batching across hours (below) safe: each batch
-skips what's already fetched.
+**Run `../../fub-api/scripts/tb_fetch.py`** - the same script `reply-check`
+uses. Don't write the fetch inline; it comes out sequential and with a
+per-contact `/people` call that §4 below explicitly warns against.
+
+```bash
+export FUB_API_KEY='${user_config.fub_api_key}'
+python3 ../../fub-api/scripts/tb_fetch.py ids \
+    --days <N> --field <the filter §2 chose> --out ids.json
+python3 ../../fub-api/scripts/tb_fetch.py convs --ids ids.json --out conversations.json
+```
+
+`--sample 300 --seed 42` on the `ids` call when §2 landed on a sample.
+Concurrency, the resumable results file, rate-limit reading and the 429
+halt are all in the script - re-running the same command resumes, which is
+what makes batching across hours safe. Empty `texts` array = no history,
+not an error.
 
 ### Budget - read it, never assume it (same rules as `reply-check`)
 Every response carries `X-RateLimit-Limit`/`Remaining`/`Cost`. Never

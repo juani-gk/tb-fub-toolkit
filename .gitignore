@@ -6,6 +6,13 @@
 # Resultados de corridas (pueden contener datos de contactos reales)
 fub_results.json
 *_results.json
+# nombres por defecto de scripts/tb_fetch.py
+ids*.json
+conversations*.json
+
+# Python
+__pycache__/
+*.pyc
 
 # macOS
 .DS_Store

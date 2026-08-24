@@ -347,34 +347,71 @@ Important quirk: with `idsOnly=true` FUB returns ALL matching IDs in one respons
 
 ### 2. Fetch conversations
 
-For each contact, POST to the proxy. One contact per call - it does not accept batches.
+**Run `../fub-api/scripts/tb_fetch.py`. Do not write this fetch inline.**
 
-```python
-status, body = http(
-    "https://tb-proxy.vercel.app/api/conversation",
-    {"Authorization": "Bearer ${user_config.fub_api_key}",
-     "Content-Type": "application/json"},
-    data=json.dumps({"personid": str(pid)}).encode(),
-    method="POST",
-)
-texts = (body or {}).get("texts", [])
+```bash
+export FUB_API_KEY='${user_config.fub_api_key}'
+python3 ../fub-api/scripts/tb_fetch.py ids \
+    --days <N> --field lastReceivedInboxAppMessage --out ids.json
+python3 ../fub-api/scripts/tb_fetch.py convs --ids ids.json --out conversations.json
 ```
 
-Response: `{"texts": [{"direction": "sent"|"received", "body": ..., "t": "<timestamp>", "created_by": ..., "automation_id": ..., "action_plan_id": ..., ...}]}`.
+Add `--sample 300` to the `ids` call when the user chose a sample (§0); the
+seed is fixed so a rerun draws the same contacts. `--workers` defaults to 10.
 
-Practical mechanics learned the hard way:
-- Use a ThreadPoolExecutor with ~10 workers; each call takes 1-2s.
-- If *every* contact in a segment comes back empty, suspect the segment (wrong list or tag), not the credentials.
-- Keep a resumable results file keyed by `personid` so reruns skip completed fetches. **Write it to the working directory - `/tmp` is not writable here.**
-- The 45-second cap is a sandbox limit, not a TB one. Where it applies, batch at most ~130 fetches per invocation; running directly on a workstation, no chunking is needed.
-- If the user chose a sample (§0), draw ~300 with a fixed seed for
-  reproducibility. If they chose full and the segment is large, see the
-  Budget section above for the batching plan - don't quietly substitute a
-  sample for a full run they specifically asked for.
+The script already does every mechanical thing this step needs: concurrent
+fetching, a resumable results file so a rerun skips what is done, reading
+the real rate-limit headers, halting on 429 instead of retrying into the
+cap, and keeping partial results when it does halt. Re-run the same command
+to resume.
+
+**Writing this loop by hand goes wrong in a specific and expensive way.** In
+a real run it came out sequential, with a `time.sleep` added on top, and
+with a `GET /people/{id}` per contact that doubled the request count for
+data this analysis never uses. On ten contacts that is invisible; on a few
+hundred it is the difference between two minutes and half an hour. The
+script exists so the pace does not depend on remembering this.
+
+One contact per call - the proxy does not accept batches.
+
+`conversations.json` is `{"<personid>": [ ...texts... ]}`, each text being
+`{"direction": "sent"|"received", "body": ..., "t": "<timestamp>",
+"created_by": ..., "automation_id": ..., "action_plan_id": ..., ...}`.
+
+Read that file from your own analysis script - never print raw conversation
+bodies to the transcript, which spends context on data you are about to
+aggregate anyway.
+
+Two things the script reports that you should act on rather than ignore:
+- **"every conversation came back empty"** means the segment is wrong (wrong
+  list or tag), not the credentials.
+- **"NOT COMPLETE"** means contacts remain. Re-run the same command to
+  resume. If the user asked for the full population, don't report on the
+  partial set as though it were complete - say what is covered.
+
+Don't quietly substitute a sample for a full run they specifically asked
+for; see the Budget section above for how to plan a paced run out loud.
 
 ### 3. Classify
 
-Sort each conversation by timestamp. Split inbound vs outbound. Classify by the last inbound message:
+Sort each conversation by timestamp. Split inbound vs outbound.
+
+**First, drop carrier noise from the inbound side - before classifying
+anything.** Undelivered-message notices come back on the same inbound
+channel as a real reply and are not one:
+
+```
+NOISE_RE = r"message not delivered|number no longer in service|not delivered"  (case-insensitive)
+```
+
+An inbound message matching this is never a reply, never an opt-out, and
+never evidence a lead engaged. Skipping this step inflates the reply count,
+and worse, it can park a dead number at the top of the Needs Action list as
+though someone is waiting on an answer. Filter these out first, then
+classify what's left. If a contact's *only* inbound messages are noise,
+they had no reply at all.
+
+Then classify by the last inbound message:
 
 - **Opt-out**: matches `stop|unsubscribe|remove|take me off|scratch|do not contact|off your list|blocked|quit|nomore` (case-insensitive; "Quit" matters because some drips invite "just say quit", and "nomore" because some drips train the lead to reply that exact word).
 - **Warm**: matches `tell me more|hear more|interested|more info|sounds good|call me|let's talk|open to|availability|what time|works for me|quick chat`, or the contact proposed a time, asked for pricing/details/eligibility, or shared an email address.
@@ -407,6 +444,13 @@ Structure the report exactly like this:
    one). For each item: tag which of those three patterns it is, show
    time since the last inbound message ("3d 4h", not a raw timestamp),
    and the assigned agent if available (routes it to the right person).
+
+   **Compute that elapsed time against the real current clock** -
+   `datetime.now(timezone.utc)` - never against a date you typed into the
+   script yourself. Hardcoding an approximate "now" is an easy thing to
+   reach for and it quietly corrupts this whole section: staleness is what
+   the list is *sorted by*, so a wrong clock reorders which lead looks most
+   urgent, and nothing about the output looks broken when it happens.
    **Sort by staleness, oldest-waiting first** - a lead who's been
    hanging for days is more urgent than one from an hour ago, regardless
    of contact ID or alphabetical order.

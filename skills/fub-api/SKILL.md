@@ -193,6 +193,22 @@ def http(url, headers, data=None, method="GET"):
 Never disable verification (`ssl._create_unverified_context`) to work around
 a cert error - pass the `cafile` instead.
 
+**For pulling a population and its conversations, don't hand-roll any of
+this - run `scripts/tb_fetch.py`.** It ships with this skill and is what
+`reply-check` and `tb-reports` both call:
+
+```bash
+export FUB_API_KEY='${user_config.fub_api_key}'   # never hardcode it in a file
+python3 scripts/tb_fetch.py identity
+python3 scripts/tb_fetch.py ids --days 30 --field lastSentInboxAppMessage --out ids.json
+python3 scripts/tb_fetch.py convs --ids ids.json --out conversations.json
+```
+
+It has the concurrency, the resumable results file, the rate-limit reading
+and the 429 halt already in it. The `http()` helper above stays the
+reference for the *other* endpoints in this file - use it for one-off calls,
+not for sweeping a population.
+
 ---
 
 ## Authentication
