@@ -347,13 +347,13 @@ Important quirk: with `idsOnly=true` FUB returns ALL matching IDs in one respons
 
 ### 2. Fetch conversations
 
-**Run `../fub-api/scripts/tb_fetch.py`. Do not write this fetch inline.**
+**Run `${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py`. Do not write this fetch inline.**
 
 ```bash
 export FUB_API_KEY='${user_config.fub_api_key}'
-python3 ../fub-api/scripts/tb_fetch.py ids \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py ids \
     --days <N> --field lastReceivedInboxAppMessage --out ids.json
-python3 ../fub-api/scripts/tb_fetch.py convs --ids ids.json --out conversations.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py convs --ids ids.json --out conversations.json
 ```
 
 Add `--sample 300` to the `ids` call when the user chose a sample (§0); the
@@ -487,7 +487,7 @@ than waiting for someone to already know the option exists. Ask once,
 after the answer, not before it; don't hold up the actual chat report to
 ask first.
 
-When they do: use `../tb-reports/assets/reply_check_shell.html` (same
+When they do: use `${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/reply_check_shell.html` (same
 design system as `tb-reports`, same `%%PLACEHOLDER%%` + fragment-only +
 `Artifact`-publish rules documented in `tb-reports/SKILL.md` - read that
 before filling this one in). Map this section's structure directly:

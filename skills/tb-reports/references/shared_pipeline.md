@@ -65,15 +65,15 @@ already answers both:**
 window you used in the output so it's correctable.
 
 ## 3. Fetch conversations
-**Run `../../fub-api/scripts/tb_fetch.py`** - the same script `reply-check`
+**Run `${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py`** - the same script `reply-check`
 uses. Don't write the fetch inline; it comes out sequential and with a
 per-contact `/people` call that §4 below explicitly warns against.
 
 ```bash
 export FUB_API_KEY='${user_config.fub_api_key}'
-python3 ../../fub-api/scripts/tb_fetch.py ids \
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py ids \
     --days <N> --field <the filter §2 chose> --out ids.json
-python3 ../../fub-api/scripts/tb_fetch.py convs --ids ids.json --out conversations.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py convs --ids ids.json --out conversations.json
 ```
 
 `--sample 300 --seed 42` on the `ids` call when §2 landed on a sample.

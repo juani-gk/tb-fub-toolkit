@@ -116,6 +116,18 @@ before propagating - see the comment at the top of that file.
   does. `reply-check` builds this **on request only**, never by default -
   see that skill's "Optional: a shareable report" section.
 
+### Where the shells live
+
+Reference them at `${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/<name>.html`,
+always. `${CLAUDE_PLUGIN_ROOT}` is set for you and points at the installed
+plugin; a relative path like `assets/…` does not resolve, because you are
+working in a scratchpad directory, not in the skill's own folder.
+
+**Do not copy a shell into your working directory first.** An observed run
+did exactly that - cached both shells into a local `assets_cache/` and then
+wrote its own 21KB renderer to fill them, because the relative path had not
+resolved. Read the shell in place and hand its path to `tb_render.py`.
+
 ### How to fill them in - data, never markup
 
 **The first three shells take a single JSON blob, not hand-written HTML.**
@@ -184,10 +196,11 @@ generated fresh on every run, not a one-time formatting pass.
 
 ## Delivery
 
-Fill the shell with `scripts/tb_render.py` rather than by hand:
+Fill the shell with `${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py` rather than by hand:
 
 ```bash
-python3 scripts/tb_render.py assets/<shell>.html report.json out.html
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py \
+    ${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/<shell>.html report.json out.html
 ```
 
 It substitutes the data object, takes `%%TITLE%%` from its `title` key,

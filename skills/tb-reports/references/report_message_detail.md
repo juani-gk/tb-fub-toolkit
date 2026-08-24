@@ -64,7 +64,7 @@ the richer taxonomy instead of a separate table split.
 **Sort default:** ascending by Engaged/opt-out ratio (worst performers
 first). Every column sortable on click; totals row stays pinned at the
 bottom through any sort. All three behaviors are already in the shell -
-`../assets/message_detail_shell.html` - and so are the rates, the ratio
+`${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/message_detail_shell.html` - and so are the rates, the ratio
 and the totals row itself. Supply it one JSON object of raw counts via
 `%%REPORT_DATA%%` (schema in that file's header comment); do not compute a
 rate or a total to put into it, and do not write table rows by hand. See
@@ -136,7 +136,7 @@ arriving after a human or the AI assistant has already jumped into the
 thread counts against whichever of those sent last, not the original
 drip step).
 
-**Output format:** `../assets/performance_by_action_plan_shell.html` -
+**Output format:** `${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/performance_by_action_plan_shell.html` -
 overview table with anchor links into per-plan sections, a legend card,
 the window toggle, and the closing note card. This is a genuinely
 different layout from Table 1's flat sortable table, which is why it's a
