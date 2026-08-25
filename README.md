@@ -52,11 +52,14 @@ Treat what it reports as a draft to verify, not as fact:
 - **TCPA and Do-Not-Call obligations remain entirely yours.** Nothing here is
   legal advice, and the tool has no way to know who you are allowed to contact.
 
-Two guardrails are built in, and both are instructions to the model rather than
-enforcement: it will not issue deletes or bulk writes without explicit
-confirmation, and it will not text a contact tagged as opted out. They make
-accidents much less likely. They are not a substitute for reading what it
-proposes before you say yes.
+Guardrails are built in, and all of them are instructions to the model rather
+than enforcement: no deletes, ever; no multi-contact write without stating the
+blast radius first and getting a clear yes; no widening the scope of what was
+asked; no unbounded mutation loop; no unrequested mass re-tag/re-stage
+cleanup; no overwriting a whole field when only part of it should change; and
+it will not text a contact tagged as opted out. They make accidents much less
+likely. They are not a substitute for reading what it proposes before you say
+yes.
 
 Type `/` or click "+" in chat afterward to see the skills available.
 
