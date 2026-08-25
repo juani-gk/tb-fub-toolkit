@@ -403,8 +403,13 @@ write endpoint after an ambiguous failure risks sending a text twice.
 Two things about *where this code runs*, not about FUB - check them before
 designing a batching strategy, because they change what is possible:
 
-- **`/tmp` is not writable.** Do not hardcode it for resumable state. Write
-  to the current working directory, or to a path the user gives you. If a
+- **Write state to the working directory, not `/tmp`.** Whether `/tmp` is
+  writable depends on where this runs - it is not in some sandboxes, and is
+  on a workstation, so a script that hardcodes it works until it doesn't.
+  There is a second reason to avoid it regardless: these files hold real
+  contact conversations, and the working directory is what this repo's
+  `.gitignore` covers. A real run left a 2MB `/tmp/conversations_365.json`
+  behind. Use the working directory, or a path the user gives you, and if a
   write fails, say so instead of silently losing progress.
 - **The 45-second per-call limit is a sandbox restriction, not a FUB one.**
   It applies when running inside a bash tool with a timeout, and it is why
@@ -516,7 +521,7 @@ Pull the individual collections and merge them client-side.
 ```python
 import os
 
-# /tmp is NOT writable here - keep state in the working directory
+# keep state in the working directory - see Environment constraints
 results_file = "fub_results.json"
 results = json.load(open(results_file)) if os.path.exists(results_file) else {}
 
@@ -564,7 +569,7 @@ print(f"Done: {len(results)}/{len(contact_ids)}")
 | HTML login page instead of JSON | Called an endpoint this integration can't reach | That endpoint is out of scope - use the API-key alternative |
 | HTTP 404 on smart list | Hardcoded an ID from another account | Discover by name via `/smartLists`; IDs are per-account |
 | No "replied" list exists | Account segments by tag, not by list | Discover tag names from a person object's embedded `tags` array, then filter with `/people?tags=` |
-| `Read-only file system: '/tmp/…'` | `/tmp` is not writable here | Write state to the working directory instead |
+| `Read-only file system: '/tmp/…'` | `/tmp` is read-only in some sandboxes | Write state to the working directory instead - do that everywhere, not only when this fires |
 | Bash 45s timeout | Sandbox limit, not a FUB limit | Chunk to ≤55 contacts per call - only when a timeout applies |
 
 ---

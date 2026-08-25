@@ -364,6 +364,12 @@ confirming against a real sample first, same as §4.
 - [ ] Loaded a saved profile if one exists, and re-derived instead of using
       it when `load` reported it stale or drifted (file intro)
 - [ ] Stated the calibration date in the report when a saved profile was used
+- [ ] **Saved the profile once the patterns and floors were settled** -
+      `tb_profile.py save` - before delivering. This is the step that is
+      easiest to skip, because its whole payoff lands on the *next* run: a
+      real run derived the thresholds correctly, used them, and saved
+      nothing, so the ten minutes of reading had to happen again from
+      scratch. Saving costs one command.
 - [ ] Sampled this account's own sent messages before writing any
       pattern-matching regex or picking any content-feature threshold -
       never applied another account's greeting/signature/length example
