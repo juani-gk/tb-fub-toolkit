@@ -108,9 +108,7 @@ before propagating - see the comment at the top of that file.
   linking into per-plan drill-down sections (sequence order, relative
   grading, narrative notes, dual time-window toggle) - a genuinely
   different layout from a flat sortable table, which is why it's a
-  separate file. Has an HTML-comment template at the bottom showing the
-  exact one-plan-section markup to repeat; that comment is structural
-  only, never real content from any account.
+  separate file.
 - `assets/optouts_vs_replies_shell.html` - KPI row + bar chart + table-view
   toggle for Opt-Outs vs. Replies
 - `assets/reply_check_shell.html` - belongs to `reply-check`, not a
@@ -118,12 +116,81 @@ before propagating - see the comment at the top of that file.
   does. `reply-check` builds this **on request only**, never by default -
   see that skill's "Optional: a shareable report" section.
 
-All four use `%%PLACEHOLDER%%` markers. Read the file, replace every
-placeholder (title, subtitle, row HTML, daily-data JSON, etc.), and render
- - these already encode the mark specs, pill conventions, sortable-column
-JS, and pinned-totals-row behavior worked out against real accounts.
+### Never name a path to a shell - name the shell
 
-**All three shells are body content, not full documents** - `<title>` +
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py \
+    --shell performance_by_action_plan report.json out.html
+```
+
+`--shell` takes a name, and the script resolves the file next to itself.
+Valid names: `message_detail`, `performance_by_action_plan`,
+`optouts_vs_replies`, `reply_check`.
+
+**Do not search the filesystem for a shell, and do not copy one into your
+working directory.** There are usually several copies of this repo on a
+machine - a checkout, a git worktree, and the installed plugin cache - and
+they are not the same version. Two real runs went wrong here: one copied
+both shells into a local `assets_cache/` and wrote its own 21KB renderer to
+fill them, and another found a stale checkout by filename and filled
+old-format shells from a branch two versions behind, silently shipping the
+wrong report. Naming the shell removes the choice.
+
+### Table 1 and Table 2 are two artifacts, never one page
+
+Publish them separately. **The shells are whole documents, not components** -
+each brings its own `<title>`, `<style>` and `<script>` - and concatenating
+two of them breaks the result in two ways at once: the second one's CSS
+overrides the first's (they deliberately differ, `table-layout: fixed` vs
+`auto`, so the message column stops being constrained and pushes every
+numeric column off the page), and two `const DATA` declarations land in one
+scope, which is a `SyntaxError` that renders a blank page.
+
+This is not hypothetical - a real run merged them and shipped a report with
+its columns hanging off the right edge. `tb_render.py` now refuses input
+that looks pre-merged, but the rule is the fix: one shell, one file, one
+artifact.
+
+### How to fill them in - data, never markup
+
+**The first three shells take a single JSON blob, not hand-written HTML.**
+`message_detail_shell.html` and `performance_by_action_plan_shell.html`
+have exactly two placeholders each - `%%TITLE%%` and `%%REPORT_DATA%%` -
+and `optouts_vs_replies_shell.html` works the same way with
+`%%DAILY_DATA%%`. Each file's own header comment carries its exact schema;
+read that comment, build the object, substitute it in. Only
+`reply_check_shell.html` still takes per-field placeholders.
+
+This is not a style preference. Writing table rows by hand was the single
+slowest step in producing a report - a drill-down with a dozen plans over
+two windows meant generating hundreds of `<tr>` blocks - and it put
+arithmetic in the least reliable possible place. So:
+
+- **Put raw counts in the JSON. Never a rate, never a ratio, never a
+  totals row, never a plan-level subtotal.** Every one of those is derived
+  in the shell from the counts you supply, which is what makes the totals
+  row structurally incapable of disagreeing with the rows above it. If you
+  catch yourself computing `engaged / sent` to write into the data, stop -
+  that field does not exist.
+- **Grading pills go in as keys, not markup**: `"pills": ["high-optout",
+  "more-optouts"]`. The shell owns the label text and the CSS class. The
+  key list is fixed and maps 1:1 to shared_pipeline §10's ladder - see
+  `PILL_SPEC` in either shell. An unknown key still renders, and warns in
+  the console, so a typo degrades visibly instead of silently.
+- **Don't escape anything.** All text is inserted with `textContent`.
+  Quotes, apostrophes, angle brackets and ampersands in real message
+  bodies go in verbatim, as ordinary JSON strings.
+- **Ordering and anchors are computed.** The action-plan overview sorts
+  biggest-first by Sent and the plan sections follow that same order, with
+  their anchor links generated to match. Supply the plans in any order.
+
+What you still own is everything that needs judgment: the window, the
+threshold calibration and how it's stated, the per-row pill assignment,
+the narrative notes (§11), and the one-line per-plan synthesis. The shells
+already encode the mark specs, pill conventions, sortable-column JS, and
+pinned-totals-row behavior worked out against real accounts.
+
+**All four shells are body content, not full documents** - `<title>` +
 `<style>` + markup + `<script>`, deliberately with no `<!doctype>`,
 `<html>`, `<head>`, or `<body>` tag of their own. That's not a stray
 omission - the `Artifact` tool's own contract requires content-only,
@@ -152,6 +219,18 @@ generated fresh on every run, not a one-time formatting pass.
 
 ## Delivery
 
+Fill the shell with `${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py` rather than by hand:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/scripts/tb_render.py --shell <name> report.json out.html
+```
+
+It substitutes the data object, takes `%%TITLE%%` from its `title` key,
+accepts `--set NAME=value` for any other placeholder, and **exits with an
+error if any placeholder is left unfilled** - which is the whole point, since
+by hand an unfilled `%%ROWS%%` ships to the reader as literal text in the
+middle of the page.
+
 Published via the `Artifact` tool (load the `artifact-design` skill first,
 per its own rules - it decides how much design polish a given ask
 warrants), passing the filled-in shell **exactly as it is, content-only,
@@ -161,9 +240,8 @@ exactly the persist-by-default case.
 
 If `Artifact` isn't available in the session, say so and fall back to
 writing a file instead - but a bare fragment isn't a valid standalone
-file, so wrap the *same* filled-in content in a minimal document at that
-point: `<!doctype html><html><head><meta charset="utf-8"></head><body>` +
-the fragment + `</body></html>`. Do this wrapping only for the file
+file, so pass `--standalone` to `tb_render.py`, which wraps the same
+content in a minimal document. Use that flag **only** for the file
 fallback, never for the `Artifact` path, and never bake the wrapper into
 the shell files themselves.
 
@@ -182,8 +260,20 @@ population/thresholds before offering to schedule it.
 
 ## Verification before delivering any report
 
+- [ ] The shipped scripts did the mechanical work - `tb_fetch.py`,
+      `tb_profile.py`, `tb_render.py`. If you wrote your own fetch, your own
+      threshold arithmetic, or your own renderer, stop and use these instead:
+      every one of them exists because a hand-written version shipped a real
+      bug (a sequential sweep, an uncalibrated floor, a stale shell).
+
 - [ ] Totals row / KPI numbers cross-checked against the raw per-row data
-      (sum the rows yourself, don't trust a single computed pass)
+      (sum the rows yourself, don't trust a single computed pass). For
+      `message_detail_shell.html` and `performance_by_action_plan_shell.html`
+      the shell derives every rate, ratio and total from the counts you
+      supplied, so what needs checking there is the *counts* - that Sent,
+      Engaged and Opt-outs per row match the classified data. For
+      `optouts_vs_replies_shell.html` and `reply_check_shell.html`, check
+      the summed figures too.
 - [ ] Threshold choice stated in the report's own text, with excluded-row
       count and combined volume - never a silent cutoff
 - [ ] Population filter matches the report's actual question (shared_pipeline §2)

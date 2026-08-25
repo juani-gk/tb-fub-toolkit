@@ -193,6 +193,22 @@ def http(url, headers, data=None, method="GET"):
 Never disable verification (`ssl._create_unverified_context`) to work around
 a cert error - pass the `cafile` instead.
 
+**For pulling a population and its conversations, don't hand-roll any of
+this - run `${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py`.** It ships with this skill and is what
+`reply-check` and `tb-reports` both call:
+
+```bash
+export FUB_API_KEY='${user_config.fub_api_key}'   # never hardcode it in a file
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py identity
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py ids --days 30 --field lastSentInboxAppMessage --out ids.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/fub-api/scripts/tb_fetch.py convs --ids ids.json --out conversations.json
+```
+
+It has the concurrency, the resumable results file, the rate-limit reading
+and the 429 halt already in it. The `http()` helper above stays the
+reference for the *other* endpoints in this file - use it for one-off calls,
+not for sweeping a population.
+
 ---
 
 ## Authentication
@@ -352,9 +368,15 @@ Consequences worth planning around:
 - Read `X-RateLimit-Remaining` from responses and slow down as it drops,
   rather than waiting for the 429.
 
-**Best practice:** sleep 0.5s between requests (~2/s, comfortably under the
-ceiling and leaves room for other traffic). On HTTP 429, back off
-exponentially:
+**This ceiling governs calls to FUB's own endpoints, one at a time.** It is
+not the budget for sweeping conversations: those go to the Texting Betty
+proxy, which has a separate hourly allowance (`X-RateLimit-Cost` per contact)
+and is fetched concurrently by `tb_fetch.py`. Do not apply the pacing below
+to that sweep - it is what turns a ninety-second job into half an hour.
+
+**For FUB endpoints called directly:** sleep 0.5s between requests (~2/s,
+comfortably under the ceiling and leaves room for other traffic). On HTTP
+429, back off exponentially:
 
 ```python
 import time, urllib.request, json
@@ -381,18 +403,19 @@ write endpoint after an ambiguous failure risks sending a text twice.
 Two things about *where this code runs*, not about FUB - check them before
 designing a batching strategy, because they change what is possible:
 
-- **`/tmp` is not writable.** Do not hardcode it for resumable state. Write
-  to the current working directory, or to a path the user gives you. If a
+- **Write state to the working directory, not `/tmp`.** Whether `/tmp` is
+  writable depends on where this runs - it is not in some sandboxes, and is
+  on a workstation, so a script that hardcodes it works until it doesn't.
+  There is a second reason to avoid it regardless: these files hold real
+  contact conversations, and the working directory is what this repo's
+  `.gitignore` covers. A real run left a 2MB `/tmp/conversations_365.json`
+  behind. Use the working directory, or a path the user gives you, and if a
   write fails, say so instead of silently losing progress.
 - **The 45-second per-call limit is a sandbox restriction, not a FUB one.**
   It applies when running inside a bash tool with a timeout, and it is why
   large jobs get split into chunks. Running the same script directly on a
   workstation, no chunking is needed - do not carve a 500-contact job into
   ten pieces if nothing is imposing a timeout.
-
-Where a timeout *does* apply: at ~0.5s per request, keep each invocation
-under ~55 contacts and accumulate results in a resumable file keyed by
-contact ID, so a rerun skips what is already done.
 
 ---
 
@@ -429,425 +452,47 @@ while True:
 
 ---
 
-## People
+## Endpoints
 
-### List People
+Request shapes, parameters and response fields are in
+`${CLAUDE_PLUGIN_ROOT}/skills/fub-api/references/endpoints.md`. Read it when
+you need one; it is lookup data, not something to load every time. What is
+covered there:
 
-```
-GET /people
-```
-
-| Param | Example | Notes |
-|---|---|---|
-| `limit` | `100` | Max per page |
-| `offset` | `0` | Offset pagination |
-| `sort` | `-lastCommunication` | Prefix `-` = descending |
-| `fields` | `allFields` | Return all fields (use this; partial field lists can 400) |
-| `smartListId` | `130` | Filter by smart list |
-| `idsOnly` | `true` | Return only IDs (fast for counting) |
-| `includePonds` | `true` | Include pond assignments |
-| `q` | `jane doe` | Full-text search by name/email/phone |
-
-**Key person fields:**
-```json
-{
-  "id": 12345,
-  "name": "Jane Doe",
-  "firstName": "Jane",
-  "lastName": "Doe",
-  "stage": "Lead",
-  "stageId": 33,
-  "type": "Buyer",
-  "source": "<unspecified>",
-  "assignedUserId": 15,
-  "assignedTo": "Agent Name",
-  "assignedPonds": [{ "id": 5, "name": "Example Team" }],
-  "tags": [{ "id": 2, "name": "Import" }],
-  "emails": [{ "value": "...", "type": "home", "status": "Valid", "isPrimary": 1 }],
-  "phones": [{ "value": "5555550100", "type": "mobile", "status": "Valid", "isPrimary": 1,
-               "normalized": "5555550100", "isLandline": false }],
-  "lastCommunication": "2026-06-09T13:06:45Z",
-  "lastSentInboxAppMessageBody": "Hi, this is ...",
-  "lastReceivedInboxAppMessageBody": "Thanks, I'll think about it",
-  "textsReceived": 2,
-  "textsSent": 3,
-  "contacted": 1,
-  "lastActivity": "2026-06-09T13:06:45Z"
-}
-```
-
-**Extract team name:**
-```python
-team = person.get("assignedPonds", [{}])[0].get("name") or person.get("assignedTo") or "Unassigned"
-```
-
-**Contact URL:**
-```
-https://<account.domain>.followupboss.com/2/people/view/{id}
-```
-
----
-
-### Get Single Person
-
-```
-GET /people/{id}
-```
-
-Returns the full person object plus:
-- `publishedInboxAppsForContact` - active embedded app conversations
-- `mostRecentMessagePublishedInboxAppId`
-- All `last*` communication timestamps
-- `callsDuration`, `firstCall`, `lastCall`
-- `background`, `picture`, `socialData`
-- `timeframeId`, `timeframeStatus`, `timeframeDateRange`
-
----
-
-### Get Person Summary (Lightweight)
-
-```
-GET /people/{id}/summary
-```
-
-Returns: name, stage, phones, emails, assigned agent, embedded apps list. Use when you don't need the full object.
-
----
-
-## Filtering People
-
-```
-POST /people/filter?idsOnly=true
-```
-```json
-{"conditions":[[{"fld":"lastReceivedInboxAppMessage","opr":"was less than","num":"2","unit":"days","val":[]}]]}
-```
-
-Answers a question directly instead of relying on a smart list existing that
-happens to encode it. **Prefer this over discovering a list by name** when you
-know the condition you actually want.
-
-`conditions` is an **array of arrays** - the nesting is required.
-
-Useful fields, same vocabulary as smart list conditions (see below):
-
-| `fld` | Meaning |
+| Section | Use it for |
 |---|---|
-| `lastReceivedInboxAppMessage` | Last inbound Texting Betty message |
-| `lastCommunication` | Any channel |
-| `inboxAppMessagesReceived` | Count of inbound TB messages |
-| `tags` | Tag membership |
-| `stage` | Stage |
-
-Pair `fld` with an `opr` such as `was less than` / `was more than` plus `num`
-and `unit`, or `is equal to` / `include any of` plus `val`.
-
-**Send `idsOnly=true` by default.** Omit it only when you have already decided
-which fields you need and why.
-
-The reasoning is not cosmetic. A filter over a few hundred leads returns a few
-hundred full person objects - every custom field, every phone, every timestamp -
-and in this toolkit the very next step usually only needs the ID to fetch a
-conversation. That payload costs response time, rate-limit budget, and context
-window, for data that is discarded a line later.
-
-If you find you need a field after all, fetch that one contact with
-`GET /people/{id}`. One extra call beats hundreds of unused objects.
-
-The pagination quirk applies here too: all IDs come back in one response and
-offsets are ignored.
-
----
-
-## Smart Lists
-
-### List All Smart Lists
-
-```
-GET /smartLists?limit=100
-```
-
-Returns only lists visible to the authenticated user. To find ALL lists (including team-specific ones): scan IDs 1–250 individually - most will 404, which is fine.
-
-**Never hardcode a smart list ID.** IDs are per-account: the same number is
-a different list in another tenant, and most lists do not exist at all in a
-given account. Always discover by name:
-
-```python
-status, data = http(f"{BASE}/smartLists?limit=100", headers)
-lists = {l["name"].lower(): l["id"] for l in data.get("smartlists", [])}
-match = next((i for n, i in lists.items() if "replied" in n), None)
-```
-
-If nothing matches, **do not guess an ID and do not fall back to a number
-from another account.** Show the user the lists that do exist and ask which
-one to use.
-
-**A matching list may not exist at all.** Not every account has "replied"
-lists - segmentation is often done by *tag* instead. Discover tag names from
-the `tags` array embedded on person objects you already have (from
-`/people`, `/people/filter`, or `GET /people/{id}`), or ask the user for the
-exact tag name.
-
-Tags whose names encode TB state (engagement, unsubscribe) identify the
-contacts with messaging history. Filter people by tag with
-`GET /people?tags=<name>&idsOnly=true`. For a full reply-analysis task,
-invoke the `reply-check` skill instead of reimplementing this filter +
-classify workflow here - it already has both paths built.
-
-**Response shape:**
-```json
-{
-  "id": 130,
-  "name": "Replied Today",
-  "isFub2": true,
-  "shared": false,
-  "createdById": 1,
-  "conditions": [
-    {
-      "fld": "lastCommunication",
-      "opr": "was more than",
-      "num": 0,
-      "unit": "days",
-      "val": null
-    }
-  ]
-}
-```
-
-**Common condition fields (`fld`):**
-- `tags` - operators: `include any of`, `do not include any of` (val = array of tag IDs)
-- `stage` - `is equal to` (val = array of stage IDs)
-- `lastCommunication` - `was more than` (num = days, unit = "days")
-- `assignedUserId` - `is any of` (val = array of user IDs)
-- `phone` - `is not bad`
-- `inboxAppMessagesReceived` - `is less than`
-
----
-
-### Get Single Smart List
-
-```
-GET /smartLists/{id}
-```
-
----
-
-## Tags
-
-Tags are account-specific. Discover them from the `tags` array embedded on
-person objects (returned by `/people`, `/people/filter`, or
-`GET /people/{id}`) rather than hardcoding IDs or names in a skill. Common
-built-in or convention-based tags include things like `Import` (imported
-contact), an "engaged with the SMS platform" tag, and an "AI messaging
-disabled" tag, but exact names and IDs vary per account.
-
----
-
-## Stages
-
-### List All Stages
-
-```
-GET /stages
-```
-
-```json
-{
-  "stages": [
-    {
-      "id": 33,
-      "name": "Lead",
-      "orderWeight": 3000,
-      "isProtected": false,
-      "peopleCount": 666,
-      "actionPlans": [{ "id": 21, "name": "Follow-Up Sequence" }]
-    }
-  ]
-}
-```
-
-Stages are fully account-specific and reflect whatever pipeline the
-account owner has configured (e.g. `Lead`, `Contacted`, `Qualified`,
-`Under Contract`, `Closed`, or a custom funnel for another use case).
-Always pull the current list live via `GET /stages` rather than assuming
-particular stage names or IDs.
-
----
-
-## Custom Fields
-
-### List Custom Fields
-
-```
-GET /customFields
-```
-
-```json
-{
-  "customfields": [
-    {
-      "id": 47,
-      "name": "customFollowUpDate",
-      "label": "Follow Up Date",
-      "type": "date",
-      "orderWeight": 43000,
-      "hideIfEmpty": true,
-      "readOnly": false,
-      "isRecurring": false
-    }
-  ]
-}
-```
-
-Field types: `date`, `number`, `text`
-
-Custom field values appear on person objects using their `name` as the key (e.g., `person["customFollowUpDate"]`).
-
----
-
-## Users
-
-### Get User by ID
-
-```
-GET /users/{id}
-```
-
-```json
-{
-  "id": 1,
-  "name": "Jane Doe",
-  "email": "jane@example.com",
-  "phone": "5555550100",
-  "role": "Broker",
-  "status": "Active",
-  "timezone": "America/New_York",
-  "calling": { "enabled": false },
-  "lastWebLogin": "2026-06-09T13:04:01Z",
-  "notifyBy": ["email", "sms"]
-}
-```
-
-To see all users on an account, use `GET /users?limit=100` and cache the
-result - user IDs and names are account-specific and should be looked up
-live, not hardcoded in a skill.
-
----
-
-## Text Message Templates
-
-### List Templates
-
-```
-GET /textMessageTemplates
-```
-
-```json
-{
-  "textmessagetemplates": [
-    {
-      "id": 19,
-      "name": "Agent > Client + Lender intro",
-      "message": "%greeting_time% %lender_first_name%, %contact_first_name% is a client...",
-      "isShared": true,
-      "totalSent": 0,
-      "totalReplies": 0,
-      "effectivenessScore": null,
-      "categories": [{ "id": 3, "name": "Follow Up Boss" }]
-    }
-  ]
-}
-```
-
-**Template variables:** `%greeting_time%`, `%contact_first_name%`, `%agent_first_name%`, `%company_name%`, `%lender_first_name%`, `%inquiry_address%`
-
----
-
-## Events / Appointments
-
-```
-GET /events?personId={id}&limit=100
-```
-
-Returns calendar events/appointments for a person.
-
----
-
-## Tasks, Action Plans, Attachments
-
-```
-GET /tasks?personId={id}&limit=100&offset=0
-GET /actionPlansPeople?personId={id}&limit=100&offset=0
-GET /personAttachments?personId={id}&limit=100&offset=0
-```
-
----
-
-## Deals / Pipelines
-
-```
-GET /pipelines
-GET /deals?personId={id}&limit=100&offset=0
-```
-
----
-
-## Agent Relationships
-
-```
-GET /myAgentRelationships/unified?personId={id}&limit=100&offset=0
-```
-
----
-
-## Reference Data
-
-```
-GET /ponds
-GET /teams
-GET /groups
-GET /categories
-GET /timeframes
-GET /callLists
-```
-
----
+| People | List, get one, and the lightweight summary |
+| Filtering People | `POST /people/filter` - the population query, `conditions` as an array of arrays |
+| Smart Lists | Discover a list by name; never hardcode an ID |
+| Tags | Pull a segment by tag |
+| Stages, Custom Fields, Users | Account metadata and field discovery |
+| Text Message Templates | Listing templates |
+| Events / Appointments, Tasks / Action Plans, Deals / Pipelines | The remaining collections, all accepting `?personId=` |
+| Agent Relationships, Reference Data | Assignment and enum lookups |
+
+Two rules that hold across every one of them, and are easy to lose when
+reading a single section in isolation: **`idsOnly=true` returns every match
+in one response and ignores pagination** - looping offsets duplicates the
+full set per page - and **Texting Betty SMS appears in none of these
+collections.** Conversations come from the proxy; see `reply-check`.
 
 ## Common Python Patterns
 
-### Fetch All Contacts from a Smart List
+### Fetch a population
+
+`scripts/tb_fetch.py` already does identity plus the population filter -
+see the top of this file. Discovering a smart list by name (never by
+hardcoded ID) still belongs here:
 
 ```python
-import base64, json, ssl, time, urllib.request
-
-CTX = ssl.create_default_context(cafile="/etc/ssl/cert.pem")
-BASE = "https://api.followupboss.com/v1"   # generic host - no subdomain needed
-key = "${user_config.fub_api_key}"
-headers = {
-    "Authorization": "Basic " + base64.b64encode((key + ":").encode()).decode(),
-}
-
-def get(path):
-    req = urllib.request.Request(f"{BASE}{path}", headers=headers)
-    with urllib.request.urlopen(req, context=CTX, timeout=30) as r:
-        return json.load(r)
-
-# 1. Validate the key belongs to the configured account
-me = get("/identity")
-print("authenticated against:", me)
-
-# 2. Discover the list by name - never hardcode an ID
 lists = {l["name"].lower(): l["id"] for l in get("/smartLists?limit=100")["smartlists"]}
 list_id = next((i for n, i in lists.items() if "replied" in n), None)
 if list_id is None:
     raise SystemExit(f"No matching list. Available: {sorted(lists)}")
-
-# 3. IDs only - the default. No pagination loop needed: idsOnly returns
-#    every match in one response.
 ids = get(f"/people?smartListId={list_id}&idsOnly=true")["ids"]
-print(f"{len(ids)} contacts")
 ```
+
+`idsOnly` returns every match in one response - no pagination loop.
 
 **Only page through full objects when you actually need fields.** Reach for
 this when you need names, phones or stages for the leads you will report on -
@@ -876,7 +521,7 @@ Pull the individual collections and merge them client-side.
 ```python
 import os
 
-# /tmp is NOT writable here - keep state in the working directory
+# keep state in the working directory - see Environment constraints
 results_file = "fub_results.json"
 results = json.load(open(results_file)) if os.path.exists(results_file) else {}
 
@@ -924,7 +569,7 @@ print(f"Done: {len(results)}/{len(contact_ids)}")
 | HTML login page instead of JSON | Called an endpoint this integration can't reach | That endpoint is out of scope - use the API-key alternative |
 | HTTP 404 on smart list | Hardcoded an ID from another account | Discover by name via `/smartLists`; IDs are per-account |
 | No "replied" list exists | Account segments by tag, not by list | Discover tag names from a person object's embedded `tags` array, then filter with `/people?tags=` |
-| `Read-only file system: '/tmp/…'` | `/tmp` is not writable here | Write state to the working directory instead |
+| `Read-only file system: '/tmp/…'` | `/tmp` is read-only in some sandboxes | Write state to the working directory instead - do that everywhere, not only when this fires |
 | Bash 45s timeout | Sandbox limit, not a FUB limit | Chunk to ≤55 contacts per call - only when a timeout applies |
 
 ---

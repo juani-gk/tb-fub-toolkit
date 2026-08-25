@@ -66,8 +66,8 @@
  .win{display:none} .win.on{display:block}
  a{color:var(--tb-ratio-pos);text-decoration:none} a:hover{text-decoration:underline}
 </style><div class="tb-report"><div class="wrap">
-<h1>%%TITLE%%</h1>
-<div class="sub">%%SUBTITLE%%</div>
+<h1 data-f="title"></h1>
+<div class="sub" data-f="subtitle"></div>
 
 <div class="card">
 <h2>What the labels mean</h2>
@@ -87,36 +87,8 @@ file in sync if the thresholds ever change.</p>
   <div><span class="pill pill-dead">Not enough volume</span>Below the response/volume floor, so nothing can be read into it.</div>
 </div></div>
 
-<div class="toggle">
-  <button data-t="w1" class="on">%%WINDOW_1_LABEL%%</button>
-  <button data-t="w2">%%WINDOW_2_LABEL%%</button>
-</div>
-
-<section class="win on" data-win="w1">
-<div class="card">
-<h2>Every action plan, biggest first</h2>
-<p class="hs">%%WINDOW_1_CAVEAT%%</p>
-<table><thead><tr><th>Action plan</th><th class="num">Steps</th><th class="num">Sent</th><th class="num">Engaged</th>
-<th class="num">Opt-outs</th><th class="num">Eng rate</th><th class="num">Opt rate</th><th class="num">Eng / opt</th></tr></thead>
-<tbody>
-%%WINDOW_1_OVERVIEW_ROWS%%
-%%WINDOW_1_OVERVIEW_TOTALS%%
-</tbody></table></div>
-%%WINDOW_1_PLAN_SECTIONS%%
-</section>
-
-<section class="win" data-win="w2">
-<div class="card">
-<h2>Every action plan, biggest first</h2>
-<p class="hs">%%WINDOW_2_CAVEAT%%</p>
-<table><thead><tr><th>Action plan</th><th class="num">Steps</th><th class="num">Sent</th><th class="num">Engaged</th>
-<th class="num">Opt-outs</th><th class="num">Eng rate</th><th class="num">Opt rate</th><th class="num">Eng / opt</th></tr></thead>
-<tbody>
-%%WINDOW_2_OVERVIEW_ROWS%%
-%%WINDOW_2_OVERVIEW_TOTALS%%
-</tbody></table></div>
-%%WINDOW_2_PLAN_SECTIONS%%
-</section>
+<div class="toggle" id="winToggle"></div>
+<div id="windows"></div>
 
 <div class="card"><h2>How to read this</h2>
 <p class="cav"><strong>Step order</strong> is the position each message actually lands in for the average contact,
@@ -125,67 +97,293 @@ median position the message holds; the line under it is the typical gap since th
 sharing a number means the plan branches there, usually one variant per agent.<br>
 <strong>Not enough volume</strong> marks any message below this report's response/volume floor. It's still shown in
 sequence so the whole drip reads in order, but its numbers shouldn't be acted on.<br>
-<strong>Why two windows.</strong> %%WINDOW_RATIONALE%%<br>
+<strong>Why two windows.</strong> <span data-f="windowRationale"></span><br>
 <strong>Replies are attributed</strong> to the last message sent before them, so a reply that arrives after a human
 or the AI assistant has already jumped into the thread counts against whichever of those sent last, not the
 original drip step.<br>
-%%EXTRA_CAVEAT%%</p></div>
-<footer>%%FOOTER%%</footer>
+<span data-f="extraCaveat"></span></p></div>
+<footer data-f="footer"></footer>
 </div></div>
 <script>
-document.querySelectorAll('.toggle button').forEach(function(b){
-  b.addEventListener('click', function(){
-    document.querySelectorAll('.toggle button').forEach(function(x){x.classList.remove('on')});
+/* ---------------------------------------------------------------------------
+   ONE placeholder holds the whole report. Replace %%REPORT_DATA%% with a JSON
+   object of raw COUNTS and text.
+
+   Do NOT put rendered HTML in it, and do NOT compute any of the following by
+   hand - all of it is derived below, from the step counts, so it can never
+   disagree with the rows it summarises:
+     - every rate, every engaged/opt-out ratio
+     - each plan's Sent / Engaged / Opt-outs and its step count
+     - how many of a plan's steps are judgeable
+     - the overview table (one row per plan, biggest-first by Sent) and its
+       totals row
+     - the anchor links from the overview into each plan section
+
+   {
+     "title": "...", "subtitle": "...",
+     "windows": [
+       { "label": "Last 30 days",
+         "caveat": "intro text for this window's overview table, including the
+                    excluded non-plan tally per shared_pipeline §5",
+         "plans": [
+           { "name": "DCM 10 Days",
+             "contacts": 380,
+             "synthesis": "one-line computed synthesis, report_message_detail.md",
+             "steps": [
+               { "rank": 1, "gap": "first touch",
+                 "message": "full message text",
+                 "sent": 412, "engaged": 6, "optouts": 31,
+                 "pills": ["high-optout", "more-optouts"],
+                 "note": "narrative note per shared_pipeline §11, or omit" }
+             ] } ] },
+       { ...the second window, same shape... }
+     ],
+     "windowRationale": "...", "extraCaveat": "...", "footer": "..."
+   }
+
+   "windows" drives the toggle: two entries per report_message_detail.md, but
+   the toggle is built from the array, so it stays correct either way. Steps
+   go in sequence order; "rank" is the median position badge (§9) and "gap"
+   the line under it. "pills" holds KEYS from PILL_SPEC, never markup, and may
+   be omitted. All text is inserted with textContent, so quotes and angle
+   brackets in real message bodies are safe as-is.
+--------------------------------------------------------------------------- */
+const DATA = %%REPORT_DATA%%;
+
+const PILL_SPEC = {
+  "high-optout":       ["bad",   "High opt-out"],
+  "more-optouts":      ["bad",   "More opt-outs than replies"],
+  "low-engagement":    ["watch", "Low engagement"],
+  "no-replies":        ["watch", "No replies"],
+  "strong-reply-rate": ["good",  "Strong reply rate"],
+  "zero-optouts":      ["good",  "Zero opt-outs"],
+  "in-line":           ["mid",   "In line with the plan"],
+  "no-response":       ["dead",  "No response at all"],
+  "not-enough-volume": ["dead",  "Not enough volume"]
+};
+const BAD_PILLS = ["high-optout", "more-optouts"];
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined && text !== null) n.textContent = String(text);
+  return n;
+}
+
+function rate(part, whole) {
+  return whole > 0 ? (part / whole * 100).toFixed(1) + '%' : '0.0%';
+}
+
+/* Same three display cases and sort values as message_detail_shell.html -
+   keep the two in step if either ever changes. */
+function ratioText(engaged, optouts) {
+  if (optouts > 0) return [(engaged / optouts).toFixed(1), false];
+  if (engaged > 0) return ['no opt-outs', true];
+  return ['–', true];
+}
+
+function ratioCell(engaged, optouts) {
+  const r = ratioText(engaged, optouts);
+  const td = el('td', 'num rc' + (r[1] ? ' muted' : ''), r[0]);
+  return td;
+}
+
+function numCell(v, critical) {
+  const td = el('td', 'num', v);
+  if (critical) td.style.color = 'var(--tb-critical)';
+  return td;
+}
+
+function pillsInto(td, keys) {
+  (keys || []).forEach(function (k) {
+    const spec = PILL_SPEC[k];
+    if (!spec) { console.warn('Unknown pill key: ' + k); }
+    td.appendChild(document.createTextNode(' '));
+    td.appendChild(el('span', 'pill pill-' + (spec ? spec[0] : 'mid'), spec ? spec[1] : k));
+  });
+}
+
+/* Row tint follows the worst thing the row is saying, in the same order the
+   grading ladder resolves: volume first, then dead, then actively bad. */
+function stepVariant(pills) {
+  const p = pills || [];
+  if (p.indexOf('not-enough-volume') !== -1) return 'v-thin';
+  if (p.indexOf('no-response') !== -1) return 'v-silent';
+  if (p.some(function (k) { return BAD_PILLS.indexOf(k) !== -1; })) return 'v-flag';
+  return 'v-ok';
+}
+
+function totalsOf(steps) {
+  return (steps || []).reduce(function (a, s) {
+    a.sent += s.sent || 0; a.engaged += s.engaged || 0; a.optouts += s.optouts || 0;
+    return a;
+  }, { sent: 0, engaged: 0, optouts: 0 });
+}
+
+function judgeableCount(steps) {
+  return (steps || []).filter(function (s) {
+    return (s.pills || []).indexOf('not-enough-volume') === -1;
+  }).length;
+}
+
+function metricCells(tr, t, criticalOptouts) {
+  tr.appendChild(numCell(t.sent));
+  tr.appendChild(numCell(t.engaged));
+  tr.appendChild(numCell(t.optouts, criticalOptouts));
+  tr.appendChild(numCell(rate(t.engaged, t.sent)));
+  tr.appendChild(numCell(rate(t.optouts, t.sent)));
+  tr.appendChild(ratioCell(t.engaged, t.optouts));
+}
+
+function overviewTable(win, plans) {
+  const table = document.createElement('table');
+  table.innerHTML = '<thead><tr><th>Action plan</th><th class="num">Steps</th>' +
+    '<th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>' +
+    '<th class="num">Eng rate</th><th class="num">Opt rate</th><th class="num">Eng / opt</th>' +
+    '</tr></thead><tbody></tbody>';
+  const tbody = table.querySelector('tbody');
+  const grand = { sent: 0, engaged: 0, optouts: 0 };
+
+  plans.forEach(function (p, i) {
+    const t = totalsOf(p.steps);
+    grand.sent += t.sent; grand.engaged += t.engaged; grand.optouts += t.optouts;
+
+    const tr = document.createElement('tr');
+    const nameTd = document.createElement('td');
+    const a = el('a', null, p.name || '');
+    a.href = '#plan-' + win + '-' + (i + 1);
+    nameTd.appendChild(a);
+    tr.appendChild(nameTd);
+    tr.appendChild(numCell((p.steps || []).length));
+    metricCells(tr, t, true);
+    tbody.appendChild(tr);
+  });
+
+  const tot = document.createElement('tr');
+  tot.className = 'tot';
+  tot.appendChild(el('td', null, 'All plans'));
+  tot.appendChild(numCell(plans.reduce(function (n, p) { return n + (p.steps || []).length; }, 0)));
+  metricCells(tot, grand, false);
+  tbody.appendChild(tot);
+  return table;
+}
+
+function planSection(win, plan, rank) {
+  const frag = document.createDocumentFragment();
+
+  const anchor = document.createElement('div');
+  anchor.id = 'plan-' + win + '-' + rank;
+  frag.appendChild(anchor);
+
+  const t = totalsOf(plan.steps);
+  const steps = plan.steps || [];
+  const card = el('div', 'card plan');
+
+  const headWrap = el('div', 'planhead');
+  const left = document.createElement('div');
+  left.appendChild(el('h2', 'planname', rank + '. ' + (plan.name || '')));
+  left.appendChild(el('p', 'hs',
+    t.sent + ' sends to ' + (plan.contacts || 0) + ' contacts · ' +
+    steps.length + ' distinct messages in the sequence · ' +
+    judgeableCount(steps) + ' with enough responses to judge'));
+  if (plan.synthesis) left.appendChild(el('p', 'read', plan.synthesis));
+  headWrap.appendChild(left);
+
+  const stats = el('div', 'planstats');
+  function stat(k, v, s, color) {
+    const d = document.createElement('div');
+    d.appendChild(el('span', 'k', k));
+    const vs = el('span', 'v', v);
+    if (color) vs.style.color = color;
+    d.appendChild(vs);
+    d.appendChild(el('span', 's', s));
+    return d;
+  }
+  stats.appendChild(stat('Engaged', t.engaged, rate(t.engaged, t.sent)));
+  stats.appendChild(stat('Opt-outs', t.optouts, rate(t.optouts, t.sent), 'var(--tb-critical)'));
+  stats.appendChild(stat('Engaged / opt-out', ratioText(t.engaged, t.optouts)[0], 'plan-wide'));
+  headWrap.appendChild(stats);
+  card.appendChild(headWrap);
+
+  const table = document.createElement('table');
+  table.innerHTML = '<thead><tr><th class="seqh">Step</th>' +
+    '<th>Message and what it is doing</th>' +
+    '<th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>' +
+    '<th class="num">Eng rate</th><th class="num">Opt rate</th><th class="num">Eng / opt</th>' +
+    '</tr></thead><tbody></tbody>';
+  const tbody = table.querySelector('tbody');
+
+  steps.forEach(function (s) {
+    const tr = el('tr', 'steprow ' + stepVariant(s.pills));
+
+    const seq = el('td', 'seq');
+    seq.appendChild(el('span', 'seqn', s.rank));
+    if (s.gap) seq.appendChild(el('span', 'seqd', s.gap));
+    tr.appendChild(seq);
+
+    const msg = document.createElement('td');
+    msg.appendChild(el('span', 'msg-full', s.message || ''));
+    pillsInto(msg, s.pills);
+    if (s.note) msg.appendChild(el('div', 'note', s.note));
+    tr.appendChild(msg);
+
+    metricCells(tr, { sent: s.sent || 0, engaged: s.engaged || 0, optouts: s.optouts || 0 }, true);
+    tbody.appendChild(tr);
+  });
+
+  const tot = el('tr', 'tot');
+  tot.appendChild(document.createElement('td'));
+  tot.appendChild(el('td', null, 'Plan total'));
+  metricCells(tot, t, false);
+  tbody.appendChild(tot);
+
+  card.appendChild(table);
+  frag.appendChild(card);
+  return frag;
+}
+
+const windows = DATA.windows || [];
+const toggle = document.getElementById('winToggle');
+const host = document.getElementById('windows');
+
+windows.forEach(function (w, wi) {
+  const key = 'w' + (wi + 1);
+
+  const btn = el('button', wi === 0 ? 'on' : null, w.label || key);
+  btn.setAttribute('data-t', key);
+  toggle.appendChild(btn);
+
+  const section = el('section', 'win' + (wi === 0 ? ' on' : ''));
+  section.setAttribute('data-win', key);
+
+  /* Overview is biggest-first by Sent, and the plan sections must follow the
+     exact same order - the anchor links are built from the index. */
+  const plans = (w.plans || []).slice().sort(function (a, b) {
+    return totalsOf(b.steps).sent - totalsOf(a.steps).sent;
+  });
+
+  const card = el('div', 'card');
+  card.appendChild(el('h2', null, 'Every action plan, biggest first'));
+  card.appendChild(el('p', 'hs', w.caveat || ''));
+  card.appendChild(overviewTable(key, plans));
+  section.appendChild(card);
+
+  plans.forEach(function (p, i) { section.appendChild(planSection(key, p, i + 1)); });
+  host.appendChild(section);
+});
+
+document.querySelectorAll('[data-f]').forEach(function (n) {
+  const v = DATA[n.getAttribute('data-f')];
+  n.textContent = (v === null || v === undefined) ? '' : String(v);
+});
+
+document.querySelectorAll('.toggle button').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('.toggle button').forEach(function (x) { x.classList.remove('on'); });
     b.classList.add('on');
-    document.querySelectorAll('.win').forEach(function(s){
+    document.querySelectorAll('.win').forEach(function (s) {
       s.classList.toggle('on', s.dataset.win === b.dataset.t);
     });
   });
 });
 </script>
-
-<!--
-ONE-PLAN-SECTION TEMPLATE - repeat this block for every row in the overview
-table, inside %%WINDOW_N_PLAN_SECTIONS%%. Nothing below is real content;
-every bracketed value is computed per plan, per window. Do not carry any
-one account's real plan names, message text, or numbers into this shell -
-it must stay usable for any account.
-
-<div id="plan-{window}-{rank}"></div>
-<div class="card plan">
-<div class="planhead">
-  <div>
-    <h2 class="planname">{rank}. {plan display name}</h2>
-    <p class="hs">{sends} sends to {contacts} contacts &middot; {n} distinct messages in the sequence
-      &middot; {judgeable_n} with enough responses to judge</p>
-    <p class="read">{one-line computed synthesis - see report_message_detail.md}</p>
-  </div>
-  <div class="planstats">
-    <div><span class="k">Engaged</span><span class="v">{engaged}</span><span class="s">{eng_rate}</span></div>
-    <div><span class="k">Opt-outs</span><span class="v" style="color:var(--tb-critical)">{optouts}</span><span class="s">{opt_rate}</span></div>
-    <div><span class="k">Engaged / opt-out</span><span class="v">{ratio}</span><span class="s">plan-wide</span></div>
-  </div>
-</div>
-<table><thead><tr>
-  <th class="seqh">Step</th><th>Message and what it is doing</th>
-  <th class="num">Sent</th><th class="num">Engaged</th><th class="num">Opt-outs</th>
-  <th class="num">Eng rate</th><th class="num">Opt rate</th><th class="num">Eng / opt</th>
-</tr></thead><tbody>
-    <tr class="steprow v-{flag|thin|ok|silent}">
-      <td class="seq"><span class="seqn">{median rank}</span><span class="seqd">{gap since previous}</span></td>
-      <td><span class="msg-full">{full message text, quoted}</span> {0+ pills per shared_pipeline §10}
-          <div class="note">{narrative note per shared_pipeline §11, or omit the div if none apply}</div></td>
-      <td class="num">{sent}</td>
-      <td class="num">{engaged}</td>
-      <td class="num" style="color:var(--tb-critical)">{optouts}</td>
-      <td class="num">{eng_rate}</td>
-      <td class="num">{opt_rate}</td>
-      <td class="num rc">{ratio, or "no opt-outs" muted when optouts=0, or "&ndash;" muted when engaged=0 and optouts=0}</td>
-    </tr>
-    <!-- one steprow per distinct message in this plan, in sequence order -->
-  <tr class="tot"><td></td><td>Plan total</td><td class="num">{sent}</td><td class="num">{engaged}</td>
-      <td class="num">{optouts}</td><td class="num">{eng_rate}</td><td class="num">{opt_rate}</td>
-      <td class="num rc">{ratio}</td></tr>
-</tbody></table>
-</div>
--->

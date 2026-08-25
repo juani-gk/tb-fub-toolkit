@@ -63,8 +63,18 @@ the richer taxonomy instead of a separate table split.
 
 **Sort default:** ascending by Engaged/opt-out ratio (worst performers
 first). Every column sortable on click; totals row stays pinned at the
-bottom through any sort. Markup: `../assets/message_detail_shell.html`
-(fill in, don't rebuild).
+bottom through any sort. All three behaviors are already in the shell -
+`${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/message_detail_shell.html` - and so are the rates, the ratio
+and the totals row itself. Supply it one JSON object of raw counts via
+`%%REPORT_DATA%%` (schema in that file's header comment); do not compute a
+rate or a total to put into it, and do not write table rows by hand. See
+`SKILL.md`, "How to fill them in - data, never markup."
+
+A row whose ratio is undefined because nothing came back at all (0
+engaged, 0 opt-outs) shows an en dash and sorts as 0, alongside rows that
+earned no replies but did draw opt-outs. It is not sorted below them: a
+message that cost nothing does not outrank one that is actively bleeding
+opt-outs in a worst-first table. The pill says which is which.
 
 ## Table 2 - by action plan ("Performance by Action Plan")
 
@@ -126,8 +136,18 @@ arriving after a human or the AI assistant has already jumped into the
 thread counts against whichever of those sent last, not the original
 drip step).
 
-**Output format:** `../assets/performance_by_action_plan_shell.html` -
+**Output format:** `${CLAUDE_PLUGIN_ROOT}/skills/tb-reports/assets/performance_by_action_plan_shell.html` -
 overview table with anchor links into per-plan sections, a legend card,
 the window toggle, and the closing note card. This is a genuinely
 different layout from Table 1's flat sortable table, which is why it's a
 separate shell file rather than a second table pair in the same one.
+
+It takes one JSON object via `%%REPORT_DATA%%` (schema in that file's
+header comment) holding both windows, their plans, and each plan's steps
+as raw counts. The shell builds the overview table, its totals row, every
+plan section, each plan's own subtotals and stat callouts, the
+biggest-first ordering and the anchor links between them. What you supply
+per step is `rank`, `gap`, `message`, `sent`, `engaged`, `optouts`,
+`pills` and an optional `note`; per plan, its `name`, `contacts` count and
+one-line `synthesis`. Nothing else - in particular, no rates, no ratios,
+no plan totals, and no HTML.
