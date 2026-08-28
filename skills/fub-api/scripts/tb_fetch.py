@@ -163,16 +163,45 @@ def cmd_convs(args):
         print("nothing left to fetch (%d contacts complete)" % len(done))
         return
 
-    print("fetching %d contacts, %d workers" % (len(todo), args.workers))
-    started, stop, errors = time.time(), None, {}
-    last_headers = {}
-
     def save():
         with open(args.out, "w") as f:
             json.dump(done, f)
 
-    # Batched so progress lands on disk as we go and a 429 can halt the
-    # sweep promptly rather than after every future has been submitted.
+    # Preflight: one synchronous call before committing to the sweep. A
+    # 401/403 is an account-wide fact, not a per-lead one - every remaining
+    # id will fail the exact same way. Finding that out from 1 call instead
+    # of burning through the whole population (or the whole batch) first is
+    # the difference between a fast, clear stop and hundreds of wasted,
+    # identical failures.
+    pid0, status0, conv0, headers0 = fetch_one(todo[0])
+    if status0 in (401, 403):
+        reason = (conv0 or {}).get("reason") if isinstance(conv0, dict) else None
+        sys.exit("preflight: %d%s - key rejected or account not registered. "
+                  "Stopped before touching the other %d contacts; do not retry." %
+                  (status0, " (%s)" % reason if reason else "", len(todo) - 1))
+    if status0 == 429:
+        sys.exit("preflight: 429 rate limited (retry-after %ss) - nothing "
+                  "fetched yet, wait for the reset before retrying." %
+                  headers0.get("Retry-After", "?"))
+    if status0 == 200:
+        done[pid0] = (conv0 or {}).get("texts", [])
+        save()
+        todo = todo[1:]
+    # Any other status (5xx, timeout) is left in `todo` - not the
+    # account-wide signal a 401/403/429 is, so it just retries below like
+    # any other contact instead of aborting the whole sweep over it.
+
+    if not todo:
+        print("%d/%d done" % (len(done), len(ids)))
+        return
+
+    print("fetching %d contacts, %d workers" % (len(todo), args.workers))
+    started, stop, errors = time.time(), None, {}
+    last_headers = headers0 or {}
+
+    # Batched so progress lands on disk as we go and a 429 or 401/403 can
+    # halt the sweep promptly rather than after every future in the batch
+    # has already run.
     for start in range(0, len(todo), args.batch):
         if stop:
             break
@@ -180,6 +209,11 @@ def cmd_convs(args):
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
             futures = {pool.submit(fetch_one, p): p for p in chunk}
             for fut in as_completed(futures):
+                if stop:
+                    # Already know the account/key is dead (or capped) from
+                    # an earlier result in this same batch - stop reading
+                    # more results and cancel whatever hasn't started yet.
+                    break
                 pid, status, conv, headers = fut.result()
                 if status == 200:
                     done[pid] = (conv or {}).get("texts", [])
@@ -192,6 +226,9 @@ def cmd_convs(args):
                 else:
                     errors[pid] = status
                 last_headers = headers or last_headers
+            if stop:
+                for f in futures:
+                    f.cancel()
         save()
         left = budget(last_headers)
         print("  %d/%d done%s" % (len(done), len(ids),
