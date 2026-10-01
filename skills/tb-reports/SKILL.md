@@ -1,6 +1,6 @@
 ---
 name: "tb-reports"
-description: "Build Texting Betty performance reports as branded, sortable HTML - opt-outs vs. replies trend, and per-template message/drip performance broken out by both wording and by source (automation/action plan/person). Use whenever the user asks \"how's my opt-out rate looking\", \"is my opt-out rate going up\", \"check template performance\", \"which messages are earning\", \"which automation/action plan performs better\", \"opt-outs vs replies\", wants a Texting Betty report/dashboard, or asks to schedule either of these to run recurringly. For unanswered warm leads / missed follow-ups, use `reply-check` instead - it already covers that as its Needs Action list. Covers the full pipeline (FUB population filters, conversation fetch, classification, threshold calibration) plus the shared Texting Betty brand design system so every report reads as one consistent product."
+description: "Build Texting Betty performance reports as branded, sortable HTML - opt-outs vs. replies trend, and per-template message/drip performance broken out by both wording and by source (automation/action plan/person). Use whenever the user asks \"how's my opt-out rate looking\", \"is my opt-out rate going up\", \"check template performance\", \"which messages are earning\", \"which automation/action plan performs better\", \"opt-outs vs replies\", wants a Texting Betty report/dashboard, or asks to schedule either of these to run recurringly. Also use when the user says \"tb-performance\", \"TB performance\" or \"tb performance report\" - the team's name for this skill and its two reports. For unanswered warm leads / missed follow-ups, use `reply-check` instead - it already covers that as its Needs Action list. Covers the full pipeline (FUB population filters, conversation fetch, classification, threshold calibration) plus the shared Texting Betty brand design system so every report reads as one consistent product."
 ---
 
 # Texting Betty Reports
@@ -17,6 +17,15 @@ file for whichever report type was actually asked for.
 |---|---|---|
 | "opt-outs vs replies", "how's my opt-out rate looking", "is it going up" - descriptive, over time | `references/report_optouts_vs_replies.md` | Daily trend of genuine replies vs. opt-outs, with a KPI summary |
 | "template performance", "which messages are earning", "which automation/action plan performs better", "why are people opting out", "what's causing this" - diagnostic, attributes to a cause | `references/report_message_detail.md` | Sent/Engaged/Opt-out breakdown ranked by engaged-per-opt-out - Table 1 by message wording, Table 2 a drill-down by automation/action plan showing every step in sequence, both required |
+
+**"tb-performance" means this skill.** It's the name the team uses for
+these two reports, since `tb-reports` reads like it covers every report in
+the plugin. If the user says "tb-performance" (or "TB performance") and
+names one of the two, build that one. If they don't say which, ask in one
+line: "Trend (are opt-outs vs. replies getting better or worse) or
+Performance (which message or automation is driving it), or both?" Don't
+confuse it with `reply-check` - that's the separate action list of who
+replied today.
 
 **Routing cue:** "is it going up" / "how many" → Trend (descriptive). "why" / "which" / "what's causing" → Performance (diagnostic - it's the only one of the two that attributes to a specific message or source). If someone asks "why" without having established there's actually a problem, a quick "has it actually gone up, or does it just feel high?" before jumping to Performance is worth it.
 
