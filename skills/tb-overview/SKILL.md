@@ -17,6 +17,9 @@ with one non-negotiable structure:
    message and which automation/action plan is driving replies or
    opt-outs, by wording and by action-plan drill-down.
 
+The team calls reports 2 and 3 together **tb-performance**; a user who
+says "tb-performance" wants `tb-reports`, not this menu.
+
 Plus two tools that aren't reports: `tb-send-text` (send one text to one
 lead) and `fub-api` (anything else in Follow Up Boss - contacts, tags,
 stages, smart lists).
