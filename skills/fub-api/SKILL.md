@@ -213,25 +213,6 @@ not for sweeping a population.
 
 ## Authentication
 
-> ⛔ **Never send `X-System: fub-spa`.** That value is FUB's own web app
-> identifier. Sending it from an integration claims to *be* their
-> first-party client, which is grounds for having the account flagged or
-> the key revoked. The same applies to any other internal client
-> identifier, including `x-fub-js-version`.
->
-> `X-System` is a legitimate header **only** when it carries an identifier
-> FUB issued to you for a registered integration, paired with its
-> `X-System-Key`. If you have one, set both. If you do not, **send
-> neither** - the requests work fine without them, just at the default
-> rate limit.
->
-> This ban is about *identity claims*, not about headers in general. It
-> covers values that assert you are FUB's own client (`fub-spa`,
-> `x-fub-js-version`). It does **not** cover generic web headers like
-> `X-Requested-With`, `Accept`, or `Content-Type` - those are standard,
-> carry no identity claim, and some are functionally required. Do not strip
-> them.
-
 ```python
 BASE_HEADERS = {}   # add {"X-System": ..., "X-System-Key": ...} only if registered
 ```
@@ -565,7 +546,6 @@ print(f"Done: {len(results)}/{len(contact_ids)}")
 | HTTP 401 | API key invalid or revoked | Stop - do not retry. Ask the user to check the key |
 | HTTP 403 | Endpoint not available to this integration | Out of scope. Use the documented alternative; never ask for a cookie |
 | HTTP 429 | Rate limit hit | Sleep 4s, exponential backoff, lower concurrency |
-| Account flagged / key revoked | Sent `X-System: fub-spa` or other first-party client headers | Never impersonate FUB's own web app; register an integration instead |
 | HTML login page instead of JSON | Called an endpoint this integration can't reach | That endpoint is out of scope - use the API-key alternative |
 | HTTP 404 on smart list | Hardcoded an ID from another account | Discover by name via `/smartLists`; IDs are per-account |
 | No "replied" list exists | Account segments by tag, not by list | Discover tag names from a person object's embedded `tags` array, then filter with `/people?tags=` |
