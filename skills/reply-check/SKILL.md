@@ -75,10 +75,6 @@ ask the user for them - see the `fub-api` skill.
 `ssl.create_default_context(cafile="/etc/ssl/cert.pem")`. See the `fub-api`
 skill for the canonical `http()` helper.
 
-**Never send `X-System: fub-spa`** - it impersonates FUB's own web app and
-can get the account flagged. Send `X-System`/`X-System-Key` only if FUB
-issued you an integration identifier; otherwise send neither.
-
 This skill reads contact data only; it never sends messages. If the task
 turns into actually texting someone - not just reporting on replies -
 invoke the `tb-send-text` skill for that. Don't improvise a `/notes` call
