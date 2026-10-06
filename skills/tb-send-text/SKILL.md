@@ -172,9 +172,6 @@ H = {
     "Authorization": "Basic " + base64.b64encode((KEY + ":").encode()).decode(),
     "Content-Type": "application/json",
 }
-# Do NOT add "X-System": "fub-spa" - that impersonates FUB's own web app
-# and can get the account flagged. Set X-System/X-System-Key only if FUB
-# issued you an integration identifier.
 
 # Confirm the key belongs to the configured account BEFORE writing anything
 idreq = urllib.request.Request(f"{BASE}/identity", headers=H)
