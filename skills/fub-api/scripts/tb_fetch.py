@@ -45,7 +45,29 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BASE = "https://api.followupboss.com/v1"
 PROXY = "https://tb-proxy.vercel.app/api/conversation"
-CTX = ssl.create_default_context(cafile="/etc/ssl/cert.pem")
+
+
+def ssl_context():
+    """First context that actually has root CAs loaded. python.org builds on
+    macOS return an empty default context without raising."""
+    cafiles = [None]
+    try:
+        import certifi
+        cafiles.append(certifi.where())
+    except ImportError:
+        pass
+    cafiles += ["/etc/ssl/cert.pem", "/usr/lib/ssl/cert.pem", "/etc/ssl/certs/ca-certificates.crt"]
+    for cafile in cafiles:
+        try:
+            ctx = ssl.create_default_context(cafile=cafile) if cafile else ssl.create_default_context()
+        except Exception:
+            continue
+        if ctx.cert_store_stats().get("x509_ca", 0) > 0:
+            return ctx
+    sys.exit("Could not find root certificates for HTTPS.")
+
+
+CTX = ssl_context()
 
 
 def key():
